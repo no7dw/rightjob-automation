@@ -1,0 +1,12 @@
+{
+  "name": "example-cv.md",
+  "text": "# 示例简历 / Example CV\n\n这是用于演示 profile 数据结构的中性示例，不包含任何真实个人信息。\n请打开扩展的「设置」页，导入你自己的 Markdown 简历后使用。\n\n## 概述 / Summary\n- 8+ 年后端与平台工程经验，示例技能包括 Python、Go、SQL。\n- 示例经历：构建数据处理流水线、维护多租户服务与自动化集成。\n\nThis is a synthetic example that documents the profile shape.\nIt contains no real personal data. Import your own Markdown CV in Settings.\n",
+  "version": "a1ce6803b917120713a84ebaefc77139d0a54547ba60e1f3adadbc3d48e701fa",
+  "imported_at": "2026-11-11T00:00:00.000Z",
+  "source": "example",
+  "is_example": true,
+  "preferences": {
+    "salary_min_k": null,
+    "excluded_terms": []
+  }
+}

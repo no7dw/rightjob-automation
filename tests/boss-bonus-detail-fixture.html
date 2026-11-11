@@ -1,0 +1,39 @@
+<!doctype html><meta charset="utf-8"><title>BOSS isolated JD · synthetic only</title>
+<style>body{font:16px/1.6 system-ui;padding:40px}.chat-conversation{width:650px;padding:20px;border:1px solid #1aa}#chat-input{min-height:100px;border:1px solid teal;padding:10px}</style>
+<div class="job-detail-box" data-job-id="job1"><h1>Agent平台架构师</h1><p>独立详情页 · 不改变原列表筛选</p><button id="contact">立即沟通</button></div>
+<script>
+const mode='__BONUS_MODE__';
+const button=document.querySelector('#contact');
+let greeted=sessionStorage.getItem('greeted')==='1';
+if(['chat_already','chat_resume'].includes(mode)||greeted)button.textContent='继续沟通';
+if(['chat_scope_drift','chat_manual_pause'].includes(mode)){button.hidden=true;setTimeout(()=>button.hidden=false,3000);}
+window.contactClicks=[];
+window.sendClicks=Number(sessionStorage.getItem('sendClicks')||0);
+function composer(){
+ const root=document.createElement('div');root.className='chat-conversation';
+ root.innerHTML='<a href="/job_detail/job1.html">查看职位</a><div id="chat-input" contenteditable="true"></div><button id="send">发送</button>';
+ document.body.append(root);
+ const editor=root.querySelector('#chat-input');editor.textContent=JSON.parse(sessionStorage.getItem('drafts')||'{}').target||'';
+ const save=()=>sessionStorage.setItem('drafts',JSON.stringify({target:editor.textContent}));
+ editor.addEventListener('blur',save);
+ root.querySelector('#send').onclick=()=>{window.sendClicks++;sessionStorage.setItem('sendClicks',String(window.sendClicks));editor.textContent='';save();};
+}
+function openChat(){
+ if(mode==='chat_no_script'){window.open('about:blank','_blank');return;}
+ const url='/web/geek/chat?fixture_job='+(mode==='chat_wrong'?'wrong-job':'job1');
+ if(mode==='chat_same')location.href=url;
+ else if(mode==='chat_spa'){history.pushState({},'',url);composer();}
+ else window.open(url,'_blank');
+}
+button.onclick=()=>{
+ if(button.textContent==='继续沟通'){openChat();return;}
+ greeted=true;sessionStorage.setItem('greeted','1');
+ sessionStorage.setItem('initialClicks',String(Number(sessionStorage.getItem('initialClicks')||0)+1));
+ button.textContent='继续沟通';
+ if(mode==='chat_reload_detail')location.reload();
+ else if(mode==='inline')composer();
+ else if(mode==='chat_first_same')location.href='/web/geek/chat?fixture_job=job1';
+ else {const dialog=document.createElement('div');dialog.setAttribute('role','dialog');dialog.innerHTML='<p>已向BOSS发送消息</p><button>继续沟通</button>';dialog.querySelector('button').onclick=openChat;document.body.append(dialog);}
+};
+if(mode==='inline'&&greeted)composer();
+</script>

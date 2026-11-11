@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>BOSS chat live markup · synthetic data</title>
+<!-- Structure checked against JSeeker-BOSS's saved BOSS chat DOM on 2026-11-05.
+     Names, companies, messages and file data below are synthetic. No site code. -->
+<style>
+body{font:16px/1.6 system-ui;background:#e7f5f6;display:flex;gap:16px;margin:25px}
+.chat-user{width:330px;background:white}.label-list{padding:12px}.label-list li{display:inline-block;padding:5px;cursor:pointer}
+.chat-content{height:760px;overflow:auto}.user-list{list-style:none;padding:0}.friend-content{padding:18px;cursor:pointer}.friend-content.selected{background:#d5f0ef}
+.name-text{font-weight:bold}.name-box>span,.last-msg{margin-right:5px}.notice-badge{color:red}.last-msg{color:#777}.vline{margin-right:4px}
+.chat-conversation{background:white;width:570px;padding:25px}.message-list{list-style:none;padding:0}.message-item{margin:20px 0}.toolbar-btn{display:inline-block;padding:8px;border:1px solid #aaa;cursor:pointer}
+.dialog-wrap{position:fixed;top:140px;left:180px;width:500px;background:white;border:2px solid #40c7c4;padding:25px}.resume-list{list-style:none;padding:0}.list-item{padding:18px;cursor:pointer}.list-item.selected{background:#d5f0ef}button{padding:8px}[hidden]{display:none!important}
+</style>
+<section class="chat-user v2"><div class="label-list"><ul><li><span>全部</span></li><li><span class="label-name">未读<i>(4)</i></span><i class="badge"></i></li></ul></div><div class="chat-content"><ul class="user-list"></ul></div></section>
+<section class="chat-conversation"><div class="top-info-content"></div><div class="message-content"><ul class="message-list"></ul></div><div class="message-controls"><div class="toolbar-btn-content"><div class="toolbar-btn tooltip tooltip-top">发简历</div></div></div></section>
+<div class="dialog-wrap active" hidden><div class="boss-popup__wrapper boss-dialog boss-dialog__wrapper dialog-default choose-resume-dialog"><div class="boss-popup__content"><div class="boss-dialog__header"><div class="boss-dialog_title"><h3>请选择要发送的简历</h3></div></div><div class="boss-dialog__body"><div class="choose-resume-dialog"><div class="resume-choose-container"><div class="resume-title">已上传附件</div><ul class="resume-list"></ul></div><div class="footer"><button class="btn-v2 btn-sure-v2 btn-confirm" disabled>发送</button></div></div></div></div></div>
+<script>
+window.events=[];window.current=null;window.picked=null;
+const mode=new URLSearchParams(location.search).get('mode');
+window.contacts=[
+ {id:'decline',name:'张女士',company:'模拟甲公司',preview:'感谢您的申请，但目前我们需要的技能组合与您的不完全符合。祝您找到理想的工作！'},
+ {id:'cv',name:'谢女士',company:'模拟乙公司',preview:'我想要一份您的附件简历，您是否同意'},
+ {id:'question',name:'同女士',company:'模拟丙公司',preview:'您能介绍一下项目经验吗'},
+ {id:'apology',name:'王先生',company:'模拟丁公司',preview:'不好意思，刚刚在开会'}
+];
+if(mode==='live_duplicate')contacts.push({...contacts[1],id:'duplicate'});
+const list=document.querySelector('.user-list'),header=document.querySelector('.top-info-content'),messages=document.querySelector('.message-list'),dialog=document.querySelector('.dialog-wrap');
+function render(){list.replaceChildren();for(const c of contacts){const li=document.createElement('li');li.setAttribute('role','listitem');const missing=mode==='live_missing_identity'&&c.id==='cv';li.innerHTML=`<div class="friend-content-warp"><div class="friend-content ${current===c.id?'selected':''}"><div class="figure">${c.read?'':'<span class="notice-badge">1</span>'}</div><div class="text"><div><span class="time">11:58</span></div><div class="title-box"><span class="name-box">${missing?'':`<span class="name-text">${c.name}</span><span>${c.company}</span><i class="vline"></i><span>招聘顾问</span>`}</span></div><div class="gray last-msg"><span class="last-msg-text">${c.preview}</span><div class="user-operation"></div></div></div></div></div>`;li.querySelector('.friend-content').onclick=()=>{events.push('read:'+c.id);current=c.id;c.read=true;render();header.replaceChildren();messages.replaceChildren();setTimeout(()=>{header.innerHTML=`<div class="user-info-wrap"><div class="base-info"><div class="name-content"><span class="name-text">${mode==='live_wrong'?'另一位招聘方':c.name}</span></div><span class="base-title">招聘顾问</span>${mode==='live_conflict'?'<span class="company-name">冲突公司</span>':''}</div></div>`;messages.innerHTML=`<li class="message-item item-friend"><div class="message-content"><div class="text"><span class="text-content">方便发一份简历过来吗？</span></div></div></li><li class="message-item item-friend"><div class="message-content"><div class="message-card-wrap"><h3 class="message-card-top-title">${c.preview}</h3><div>拒绝 同意</div></div></div></li>`;},150)};list.append(li);}}
+document.querySelector('.label-name').onclick=()=>events.push('filter:unread');
+document.querySelector('.toolbar-btn').onclick=()=>{events.push('open:resume');dialog.hidden=false;document.querySelector('.resume-list').replaceChildren();for(const name of ['Candidate-CV.pdf','Candidate-CV-cn.pdf']){const li=document.createElement('li');li.className='list-item';li.innerHTML=`<span class="icon-file"></span><div class="item-body"><div><span class="resume-name">${name}</span></div><div class="item-desc">更新于 2026.11.05 <span class="resume-size">149KB</span></div></div><div class="preview">预览</div>`;li.onclick=()=>{picked=name;events.push('pick:'+name);document.querySelectorAll('.list-item').forEach(row=>row.classList.toggle('selected',row===li));dialog.querySelector('button').disabled=false};document.querySelector('.resume-list').append(li)}};
+dialog.querySelector('button').onclick=()=>{events.push('send:'+current+':'+picked);dialog.hidden=true;messages.insertAdjacentHTML('beforeend','<li>附件简历请求已发送</li>')};
+render();
+</script></html>

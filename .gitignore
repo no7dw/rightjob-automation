@@ -1,0 +1,17 @@
+node_modules/
+__pycache__/
+dist/
+helper/vision-ocr
+.env
+.helper-token
+.helper-pairing-key
+extension/helper-pairing.json
+extension/profile.local.json
+extension/profile.seed.json
+*.log
+data/runs/
+artifacts/
+data
+graft/
+.DS_Store
+temp

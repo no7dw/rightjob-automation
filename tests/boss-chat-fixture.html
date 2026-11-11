@@ -1,0 +1,29 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>BOSS chat fixture · synthetic only</title>
+<style>body{font:16px/1.6 system-ui;background:#eef7f7;display:flex}.user-list{width:260px;list-style:none}.user-list li{background:white;margin:10px;padding:15px;cursor:pointer}.user-list .active{background:#c7eeee}.user-list span{display:block}.chat-conversation{margin:30px;width:650px;padding:30px;background:white}#chat-input{min-height:100px;border:1px solid #218c85;padding:12px}</style>
+<ul class="user-list"></ul>
+<div class="chat-conversation"><h2>模拟会话 · 非真实招聘方</h2><div class="top-info-content"></div><div id="chat-input" contenteditable="true"></div><button id="send">发送</button></div>
+<script>
+const mode='__BONUS_MODE__';
+const editor=document.querySelector('#chat-input'),header=document.querySelector('.top-info-content');
+const contacts=[{id:'other',name:'模拟招聘方',company:'另一公司',job:'wrong-job'},
+{id:'target',name:'模拟招聘方',company:'模拟公司 1',job:mode==='chat_wrong'?'wrong-job':'job1'},
+{id:'colleague',name:'另一招聘方',company:'模拟公司 1',job:'job2'}];
+if(mode==='chat_ambiguous')contacts.push({...contacts[1],id:'duplicate'});
+if(mode==='chat_missing')contacts.splice(1,1);
+window.sendClicks=Number(sessionStorage.getItem("sendClicks")||0);window.contactClicks=[];
+let current='target';
+const target={id:'target',name:'模拟招聘方',company:'模拟公司 1',job:mode==='chat_wrong'?'wrong-job':'job1'};
+editor.hidden=true;
+const drafts=JSON.parse(sessionStorage.getItem('drafts')||'{}');
+if(mode==='chat_existing'&&!drafts.target)drafts.target='我自己写的消息';
+function save(){drafts[current]=editor.textContent;sessionStorage.setItem('drafts',JSON.stringify(drafts));const row=document.querySelector('[data-contact="'+current+'"] .preview');if(row)row.textContent=editor.textContent?'[草稿]'+editor.textContent:'';}
+function show(contact){editor.hidden=false;current=contact.id;header.innerHTML='<span class="name">'+contact.name+'</span><span class="company-name">'+contact.company+'</span>'+(mode==='chat_no_link'?'<span>网站已打开目标会话</span>':'<a href="/job_detail/'+contact.job+'.html">查看职位</a>');editor.textContent=drafts[current]||'';document.querySelectorAll('.user-list li').forEach(row=>row.classList.toggle('active',row.dataset.contact===current));}
+function mount(){for(const contact of contacts){const row=document.createElement('li');row.dataset.contact=contact.id;row.innerHTML='<div class="friend-content"><span class="name">'+contact.name+'</span><span class="company-name">'+contact.company+'</span><span class="preview"></span></div>';row.querySelector('.friend-content').onclick=()=>{window.contactClicks.push(contact.id);save();editor.textContent='';header.innerHTML='<span>会话载入中</span>';setTimeout(()=>show(contact),300);};document.querySelector('.user-list').append(row);}show(target);}
+editor.addEventListener('blur',save);
+if(mode==='chat_late_reset') {
+  let reset = false;
+  editor.addEventListener('input',()=>{if(!reset){reset=true;setTimeout(()=>{editor.textContent='';save();},700);}});
+}
+document.querySelector('#send').onclick=()=>{window.sendClicks++;sessionStorage.setItem("sendClicks",String(window.sendClicks));if(mode!=="chat_unconfirmed")editor.textContent='';save();};
+setTimeout(mount,mode==='chat_delayed'?1000:0);
+</script></html>

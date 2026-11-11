@@ -1,0 +1,1977 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-22",
+  "source": {
+    "name": "cc-switch",
+    "version": "4.0.10",
+    "commit": "9719b7b367623f8f278e7f6209a7a05f3ad0fd0f",
+    "repository": "https://github.com/farion1231/cc-switch",
+    "license": "MIT",
+    "presetFiles": [
+      "src/config/claudeProviderPresets.ts",
+      "src/config/codexProviderPresets.ts",
+      "src/config/geminiProviderPresets.ts",
+      "src/config/openclawProviderPresets.ts",
+      "src/config/opencodeProviderPresets.ts",
+      "src/config/hermesProviderPresets.ts",
+      "src/config/piProviderPresets.ts"
+    ]
+  },
+  "selection": {
+    "mode": "mainstream",
+    "count": 30,
+    "criteria": "Direct model vendors, regional official platforms, and widely used model aggregators. OAuth-only providers, relay/sponsor-only services, placeholder endpoints, and Bedrock credential flows are excluded."
+  },
+  "byok": {
+    "apiKey": null,
+    "instruction": "Collect the API key at runtime from the user and keep it only in secure user storage. This catalog contains no provider secrets."
+  },
+  "stats": {
+    "providers": 30,
+    "models": 97,
+    "providersByProtocol": {
+      "anthropic_messages": 2,
+      "gemini_native": 1,
+      "openai_chat": 22,
+      "openai_responses": 5
+    }
+  },
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "baseUrl": "https://api.openai.com/v1",
+      "protocol": "openai_responses",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "websiteUrl": "https://openai.com",
+      "apiKeyUrl": "https://platform.openai.com/api-keys",
+      "categories": [
+        "official"
+      ],
+      "models": [
+        {
+          "id": "gpt-5.6-sol",
+          "name": "GPT-5.6 Sol"
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "name": "GPT-5.6 Terra"
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "name": "GPT-5.6 Luna"
+        },
+        {
+          "id": "gpt-5.5",
+          "name": "GPT-5.5"
+        },
+        {
+          "id": "gpt-6-astra",
+          "name": "GPT-6 Astra"
+        }
+      ],
+      "sources": [
+        {
+          "app": "core",
+          "preset": "Codex official API default",
+          "apiKeyField": "OPENAI_API_KEY"
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "name": "Anthropic (Claude)",
+      "baseUrl": "https://api.anthropic.com",
+      "protocol": "anthropic_messages",
+      "apiKey": null,
+      "auth": {
+        "type": "api_key",
+        "header": "x-api-key",
+        "prefix": ""
+      },
+      "websiteUrl": "https://www.anthropic.com",
+      "apiKeyUrl": "https://console.anthropic.com/settings/keys",
+      "categories": [
+        "official"
+      ],
+      "models": [
+        {
+          "id": "claude-opus-5-5",
+          "name": "Claude Opus 5.5"
+        },
+        {
+          "id": "claude-opus-5",
+          "name": "Claude Opus 5"
+        },
+        {
+          "id": "claude-sonnet-5-5",
+          "name": "Claude Sonnet 5.5"
+        },
+        {
+          "id": "claude-sonnet-5",
+          "name": "Claude Sonnet 5"
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "name": "Claude Haiku 4.5"
+        },
+        {
+          "id": "claude-fable-5-1",
+          "name": "Claude Fable 5.1"
+        }
+      ],
+      "sources": [
+        {
+          "app": "core",
+          "preset": "Claude official API default",
+          "apiKeyField": "ANTHROPIC_API_KEY"
+        }
+      ]
+    },
+    {
+      "id": "google-gemini",
+      "name": "Google Gemini",
+      "baseUrl": "https://generativelanguage.googleapis.com",
+      "protocol": "gemini_native",
+      "apiKey": null,
+      "auth": {
+        "type": "api_key",
+        "header": "x-goog-api-key",
+        "prefix": ""
+      },
+      "websiteUrl": "https://ai.google.dev",
+      "apiKeyUrl": "https://aistudio.google.com/apikey",
+      "categories": [
+        "official"
+      ],
+      "models": [
+        {
+          "id": "gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash"
+        },
+        {
+          "id": "gemini-3.6-flash",
+          "name": "Gemini 3.6 Flash"
+        },
+        {
+          "id": "gemini-3.1-pro",
+          "name": "Gemini 3.1 Pro"
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "name": "Gemini 3.1 Flash Lite"
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "name": "Gemini 2.5 Pro"
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "name": "Gemini 2.5 Flash"
+        }
+      ],
+      "sources": [
+        {
+          "app": "core",
+          "preset": "Gemini official API default",
+          "apiKeyField": "GEMINI_API_KEY"
+        }
+      ]
+    },
+    {
+      "id": "minimax-cn",
+      "name": "MiniMax (CN)",
+      "baseUrl": "https://api.minimax.cn/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.minimax.cn/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "MiniMax-M3",
+          "name": "MiniMax M3",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "MiniMax",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "MiniMax",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "MiniMax",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "MiniMax",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.minimax.cn",
+      "apiKeyUrl": "https://platform.minimax.cn/subscribe/token-plan"
+    },
+    {
+      "id": "minimax-global",
+      "name": "MiniMax (Global)",
+      "baseUrl": "https://api.minimax.io/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.minimax.io/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "MiniMax-M3",
+          "name": "MiniMax M3",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "MiniMax en",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "MiniMax en",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "MiniMax en",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "MiniMax en",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.minimax.io",
+      "apiKeyUrl": "https://platform.minimax.io/subscribe/coding-plan"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.deepseek.com/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "deepseek-v4-pro",
+          "name": "DeepSeek V4 Pro",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 384000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "deepseek-flash",
+          "name": "DeepSeek V4.1 Flash",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 384000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "openclaw",
+          "preset": "DeepSeek",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "DeepSeek",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "DeepSeek",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.deepseek.com",
+      "apiKeyUrl": "https://platform.deepseek.com/api_keys"
+    },
+    {
+      "id": "xiaomi-mimo",
+      "name": "Xiaomi MiMo",
+      "baseUrl": "https://api.xiaomimimo.com/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.xiaomimimo.com/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "mimo-v2.5",
+          "name": "MiMo V2.5",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "mimo-v2.5-pro",
+          "name": "MiMo V2.5 Pro",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-flash",
+          "name": "MiMo V2.6 Flash",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-pro",
+          "name": "MiMo V2.6 Pro",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-pro-ultraspeed",
+          "name": "MiMo V2.6 Pro UltraSpeed",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "Xiaomi MiMo",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "Xiaomi MiMo",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "Xiaomi MiMo",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "Xiaomi MiMo",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.xiaomimimo.com",
+      "apiKeyUrl": "https://platform.xiaomimimo.com/#/console/api-keys"
+    },
+    {
+      "id": "zhipu-glm-cn",
+      "name": "Zhipu GLM (CN)",
+      "baseUrl": "https://open.bigmodel.cn/api/v1",
+      "protocol": "openai_responses",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://open.bigmodel.cn/api/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "glm-5-turbo",
+          "name": "GLM-5-Turbo",
+          "contextWindow": 204800,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "max"
+          ]
+        },
+        {
+          "id": "glm-5.3",
+          "name": "GLM-5.3",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "low",
+            "high",
+            "max"
+          ],
+          "defaultReasoningLevel": "max"
+        },
+        {
+          "id": "glm-5.3-flash",
+          "name": "GLM-5.3-Flash",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "reasoningEfforts": [
+            "low",
+            "high",
+            "max"
+          ],
+          "defaultReasoningLevel": "max"
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "Zhipu GLM",
+          "apiKeyField": "OPENAI_API_KEY"
+        }
+      ],
+      "websiteUrl": "https://open.bigmodel.cn",
+      "apiKeyUrl": "https://www.bigmodel.cn/claude-code?ic=RRVJPB5SII"
+    },
+    {
+      "id": "zhipu-glm-global",
+      "name": "Zhipu GLM (Global)",
+      "baseUrl": "https://api.z.ai/api/v1",
+      "protocol": "openai_responses",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.z.ai/api/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "glm-5.3",
+          "name": "GLM-5.3",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "low",
+            "high",
+            "max"
+          ],
+          "defaultReasoningLevel": "max"
+        },
+        {
+          "id": "glm-5.3-flash",
+          "name": "GLM-5.3-Flash",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "reasoningEfforts": [
+            "low",
+            "high",
+            "max"
+          ],
+          "defaultReasoningLevel": "max"
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "Zhipu GLM en",
+          "apiKeyField": "OPENAI_API_KEY"
+        }
+      ],
+      "websiteUrl": "https://z.ai",
+      "apiKeyUrl": "https://z.ai/subscribe?ic=8JVLJQFSKB"
+    },
+    {
+      "id": "kimi-cn",
+      "name": "Kimi (CN)",
+      "baseUrl": "https://api.moonshot.cn/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.moonshot.cn/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "kimi-k2.6",
+          "name": "Kimi K2.6",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k2.7-code",
+          "name": "Kimi K2.7 Code",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k2.7-code-highspeed",
+          "name": "Kimi K2.7 Code HighSpeed",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k3",
+          "name": "Kimi K3",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "Kimi",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "Kimi",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "Kimi",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "Kimi",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.kimi.com?track_id=track-7cf2b91dcde043eda6ef9a95951a042c&aff=cc-switch",
+      "apiKeyUrl": "https://platform.kimi.com/console/api-keys?aff=cc-switch"
+    },
+    {
+      "id": "kimi-global",
+      "name": "Kimi (Global)",
+      "baseUrl": "https://api.moonshot.ai/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.moonshot.ai/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "kimi-k2.6",
+          "name": "Kimi K2.6",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k2.7-code",
+          "name": "Kimi K2.7 Code",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k2.7-code-highspeed",
+          "name": "Kimi K2.7 Code HighSpeed",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k3",
+          "name": "Kimi K3",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "Kimi Global",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "Kimi Global",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "Kimi Global",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "Kimi Global",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.kimi.ai?track_id=track-674ed6e2af924a5682a87421f7cf753a&aff=cc-switch",
+      "apiKeyUrl": "https://platform.kimi.ai/console/api-keys?aff=cc-switch"
+    },
+    {
+      "id": "alibaba-qwen-cn",
+      "name": "Alibaba Qwen (CN)",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://dashscope.aliyuncs.com/compatible-mode/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "qwen3.8-flash",
+          "name": "Qwen3.8 Flash",
+          "contextWindow": 983616,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image",
+            "video"
+          ]
+        },
+        {
+          "id": "qwen3.8-max",
+          "name": "Qwen3.8 Max",
+          "contextWindow": 983616,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image",
+            "video"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "千问AI平台",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "千问AI平台",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "千问AI平台",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "千问AI平台",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.qianwenai.com/?utm_content=g_20000002971",
+      "apiKeyUrl": "https://platform.qianwenai.com/home/api-keys?utm_content=g_20000002972"
+    },
+    {
+      "id": "alibaba-qwen-global",
+      "name": "Alibaba Qwen (Global)",
+      "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "qwen3.7-max",
+          "name": "Qwen3.7 Max",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "qwen3.8-flash",
+          "name": "Qwen3.8 Flash",
+          "contextWindow": 983616,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image",
+            "video"
+          ]
+        },
+        {
+          "id": "qwen3.8-max",
+          "name": "Qwen3.8 Max",
+          "contextWindow": 983616,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image",
+            "video"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "opencode",
+          "preset": "QwenCloud",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "QwenCloud",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://home.qwencloud.com/?utm_content=g_20000002974",
+      "apiKeyUrl": "https://home.qwencloud.com/api-keys?utm_content=g_20000002975"
+    },
+    {
+      "id": "volcengine-doubao",
+      "name": "Volcengine Doubao",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://ark.cn-beijing.volces.com/api/v3"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "doubao-seed-2-1-pro-260628",
+          "name": "DouBao Seed 2.1 Pro",
+          "contextWindow": 262144,
+          "maxOutputTokens": 16384,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "openclaw",
+          "preset": "Volcengine Doubao",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "Volcengine Doubao",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "Volcengine Doubao",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D&utm_campaign=hw&utm_content=ccswitch&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=ccswitch",
+      "apiKeyUrl": "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D&utm_campaign=hw&utm_content=ccswitch&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=ccswitch"
+    },
+    {
+      "id": "byteplus",
+      "name": "BytePlus",
+      "baseUrl": "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://ark.ap-southeast.bytepluses.com/api/coding/v3"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "ark-code-latest",
+          "name": "Ark Code Latest",
+          "contextWindow": 256000,
+          "maxOutputTokens": 16384,
+          "inputModalities": [
+            "text"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "openclaw",
+          "preset": "BytePlus",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "BytePlus",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "BytePlus",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=ccswitch&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=ccswitch",
+      "apiKeyUrl": "https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=ccswitch&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=ccswitch"
+    },
+    {
+      "id": "tencent-hunyuan",
+      "name": "Tencent Hunyuan",
+      "baseUrl": "https://tokenhub.tencentmaas.com/v1",
+      "protocol": "openai_responses",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://tokenhub.tencentmaas.com/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "hy3",
+          "name": "Hy3",
+          "contextWindow": 256000,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "low",
+            "high"
+          ]
+        },
+        {
+          "id": "hy3-preview",
+          "name": "Hy3 Preview",
+          "contextWindow": 256000,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "low",
+            "high"
+          ]
+        },
+        {
+          "id": "hy4-preview",
+          "name": "Hy4 Preview",
+          "contextWindow": 960000,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "none",
+            "high"
+          ],
+          "defaultReasoningLevel": "high"
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "Tencent Hunyuan",
+          "apiKeyField": "OPENAI_API_KEY"
+        }
+      ],
+      "websiteUrl": "https://cloud.tencent.com/product/tokenhub",
+      "apiKeyUrl": "https://console.cloud.tencent.com/tokenhub/apikey"
+    },
+    {
+      "id": "tencent-tokenhub",
+      "name": "Tencent TokenHub",
+      "baseUrl": "https://tokenhub.tencentmaas.com/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://tokenhub.tencentmaas.com/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 384000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "deepseek-v4-pro",
+          "name": "DeepSeek V4 Pro",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 384000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "glm-5.3",
+          "name": "GLM-5.3",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "glm-5.3-flash",
+          "name": "GLM-5.3 Flash",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "hy3",
+          "name": "Hy3",
+          "contextWindow": 256000,
+          "maxOutputTokens": 128000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "hy4-preview",
+          "name": "Hy4 Preview",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 65536,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "kimi-k2.7-code",
+          "name": "Kimi K2.7 Code",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k2.7-code-highspeed",
+          "name": "Kimi K2.7 Code HighSpeed",
+          "contextWindow": 262144,
+          "maxOutputTokens": 262144,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "kimi-k3",
+          "name": "Kimi K3",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "mimo-v2.5-pro",
+          "name": "MiMo-V2.5-Pro",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "minimax-m2.7",
+          "name": "MiniMax-M2.7",
+          "contextWindow": 204800,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "minimax-m3",
+          "name": "MiniMax-M3",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "pi",
+          "preset": "Tencent TokenHub",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://cloud.tencent.com/product/tokenhub",
+      "apiKeyUrl": "https://console.cloud.tencent.com/tokenhub/apikey"
+    },
+    {
+      "id": "baidu-qianfan",
+      "name": "Baidu Qianfan",
+      "baseUrl": "https://qianfan.baidubce.com/v2",
+      "protocol": "openai_responses",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://qianfan.baidubce.com/v2"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "high"
+          ]
+        },
+        {
+          "id": "deepseek-v4-pro",
+          "name": "DeepSeek V4 Pro",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "high"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "Baidu Qianfan",
+          "apiKeyField": "OPENAI_API_KEY"
+        }
+      ],
+      "websiteUrl": "https://cloud.baidu.com/product/qianfan_modelbuilder",
+      "apiKeyUrl": "https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application"
+    },
+    {
+      "id": "stepfun-cn",
+      "name": "StepFun (CN)",
+      "baseUrl": "https://api.stepfun.com/step_plan/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.stepfun.com/step_plan/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "step-3.5-flash",
+          "name": "Step 3.5 Flash",
+          "contextWindow": 262144,
+          "maxOutputTokens": 256000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "step-3.5-flash-2603",
+          "name": "Step 3.5 Flash 2603",
+          "contextWindow": 262144,
+          "reasoningEfforts": [
+            "low",
+            "high"
+          ],
+          "maxOutputTokens": 256000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "step-3.7-flash",
+          "name": "Step 3.7 Flash",
+          "contextWindow": 262144,
+          "reasoningEfforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "maxOutputTokens": 256000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "step-5-preview",
+          "name": "Step 5 Preview",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "StepFun",
+          "apiKeyField": "OPENAI_API_KEY"
+        },
+        {
+          "app": "openclaw",
+          "preset": "StepFun",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "StepFun",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "StepFun Step Plan",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "StepFun",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "StepFun Step Plan",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.stepfun.com/step-plan",
+      "apiKeyUrl": "https://platform.stepfun.com/interface-key"
+    },
+    {
+      "id": "stepfun-global",
+      "name": "StepFun (Global)",
+      "baseUrl": "https://api.stepfun.ai/step_plan/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.stepfun.ai/step_plan/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "step-3.5-flash",
+          "name": "Step 3.5 Flash",
+          "contextWindow": 262144,
+          "maxOutputTokens": 256000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "step-3.5-flash-2603",
+          "name": "Step 3.5 Flash 2603",
+          "contextWindow": 262144,
+          "reasoningEfforts": [
+            "low",
+            "high"
+          ],
+          "maxOutputTokens": 256000,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "step-3.7-flash",
+          "name": "Step 3.7 Flash",
+          "contextWindow": 262144,
+          "reasoningEfforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "maxOutputTokens": 256000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "step-5-preview",
+          "name": "Step 5 Preview",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 64000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "StepFun en",
+          "apiKeyField": "OPENAI_API_KEY"
+        },
+        {
+          "app": "openclaw",
+          "preset": "StepFun en",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "StepFun en",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "StepFun en",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://platform.stepfun.ai/step-plan",
+      "apiKeyUrl": "https://platform.stepfun.ai/interface-key"
+    },
+    {
+      "id": "longcat",
+      "name": "LongCat",
+      "baseUrl": "https://api.longcat.chat/openai/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.longcat.chat/openai/v1"
+      ],
+      "categories": [
+        "cn_official"
+      ],
+      "models": [
+        {
+          "id": "LongCat-2.0",
+          "name": "LongCat 2.0",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "Longcat",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "Longcat",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "Longcat",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "Longcat",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://longcat.chat/platform",
+      "apiKeyUrl": "https://longcat.chat/platform/api_keys"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://openrouter.ai/api/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "anthropic/claude-fable-5.1",
+          "name": "Claude Fable 5.1",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "anthropic/claude-haiku-4.5",
+          "name": "Claude Haiku 4.5",
+          "contextWindow": 200000
+        },
+        {
+          "id": "anthropic/claude-opus-5",
+          "name": "Claude Opus 5",
+          "contextWindow": 1000000
+        },
+        {
+          "id": "anthropic/claude-opus-5.5",
+          "name": "Claude Opus 5.5",
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "anthropic/claude-sonnet-5",
+          "name": "Claude Sonnet 5",
+          "contextWindow": 1000000
+        },
+        {
+          "id": "google/gemini-3.6-flash",
+          "name": "Gemini 3.6 Flash",
+          "contextWindow": 1000000
+        },
+        {
+          "id": "google/gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash",
+          "contextWindow": 1048576
+        },
+        {
+          "id": "openai/gpt-5.6-sol",
+          "name": "GPT-5.6 Sol",
+          "contextWindow": 400000
+        },
+        {
+          "id": "openai/gpt-6-astra",
+          "name": "GPT-6 Astra",
+          "contextWindow": 1050000
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "OpenRouter",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "OpenRouter",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://openrouter.ai",
+      "apiKeyUrl": "https://openrouter.ai/keys"
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow",
+      "baseUrl": "https://api.siliconflow.cn/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.siliconflow.cn/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "deepseek-ai/DeepSeek-V4-Flash",
+          "name": "DeepSeek V4 Flash",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "high",
+            "max"
+          ],
+          "defaultReasoningLevel": "high"
+        },
+        {
+          "id": "Pro/MiniMaxAI/MiniMax-M2.5",
+          "name": "MiniMax M2.5",
+          "contextWindow": 196608
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "SiliconFlow",
+          "apiKeyField": "OPENAI_API_KEY"
+        },
+        {
+          "app": "hermes",
+          "preset": "SiliconFlow",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "SiliconFlow",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://siliconflow.cn",
+      "apiKeyUrl": "https://cloud.siliconflow.cn/i/YflgU2Ve"
+    },
+    {
+      "id": "nvidia-nim",
+      "name": "NVIDIA NIM",
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://integrate.api.nvidia.com/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "z-ai/glm-5.3",
+          "name": "GLM-5.3",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        },
+        {
+          "id": "z-ai/glm-5.3-flash",
+          "name": "GLM-5.3-Flash",
+          "contextWindow": 1048576,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "moonshotai/kimi-k3",
+          "name": "Kimi K3",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "reasoningEfforts": [
+            "low",
+            "high",
+            "max"
+          ],
+          "defaultReasoningLevel": "high",
+          "maxOutputTokens": 131072
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "Nvidia",
+          "apiKeyField": "OPENAI_API_KEY"
+        },
+        {
+          "app": "openclaw",
+          "preset": "Nvidia",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "Nvidia",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "Nvidia",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://build.nvidia.com",
+      "apiKeyUrl": "https://build.nvidia.com/settings/api-keys"
+    },
+    {
+      "id": "opencode-zen",
+      "name": "OpenCode Zen",
+      "baseUrl": "https://opencode.ai/zen",
+      "protocol": "anthropic_messages",
+      "apiKey": null,
+      "auth": {
+        "type": "api_key",
+        "header": "x-api-key",
+        "prefix": ""
+      },
+      "endpointCandidates": [
+        "https://opencode.ai/zen"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "claude-haiku-4-5",
+          "name": "claude-haiku-4-5"
+        },
+        {
+          "id": "claude-opus-5-5",
+          "name": "claude-opus-5-5"
+        },
+        {
+          "id": "claude-sonnet-5-5",
+          "name": "claude-sonnet-5-5"
+        }
+      ],
+      "sources": [
+        {
+          "app": "claude",
+          "preset": "OpenCode Zen",
+          "apiKeyField": "ANTHROPIC_API_KEY"
+        }
+      ],
+      "websiteUrl": "https://opencode.ai/zen",
+      "apiKeyUrl": "https://opencode.ai/auth"
+    },
+    {
+      "id": "novita-ai",
+      "name": "Novita AI",
+      "baseUrl": "https://api.novita.ai/openai/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.novita.ai/openai/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "zai-org/glm-5.3",
+          "name": "GLM-5.3",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text"
+          ],
+          "reasoningEfforts": [
+            "high"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "Novita AI",
+          "apiKeyField": "OPENAI_API_KEY"
+        }
+      ],
+      "websiteUrl": "https://novita.ai",
+      "apiKeyUrl": "https://novita.ai"
+    },
+    {
+      "id": "ppio",
+      "name": "PPIO",
+      "baseUrl": "https://api.ppio.com/openai/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.ppio.com/openai/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "deepseek/deepseek-v4-flash-0731",
+          "name": "Deepseek V4 Flash 0731",
+          "contextWindow": 1048576,
+          "inputModalities": [
+            "text"
+          ],
+          "maxOutputTokens": 393216
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "PPIO",
+          "apiKeyField": "OPENAI_API_KEY"
+        },
+        {
+          "app": "hermes",
+          "preset": "PPIO",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "PPIO",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "PPIO",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "PPIO",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://ppio.com",
+      "apiKeyUrl": "https://ppio.com/activity/ccswitch"
+    },
+    {
+      "id": "modelscope",
+      "name": "ModelScope",
+      "baseUrl": "https://api-inference.modelscope.cn/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api-inference.modelscope.cn/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "ZhipuAI/GLM-5.2",
+          "name": "ZhipuAI / GLM-5.2",
+          "contextWindow": 200000,
+          "maxOutputTokens": 131072,
+          "inputModalities": [
+            "text"
+          ]
+        }
+      ],
+      "sources": [
+        {
+          "app": "codex",
+          "preset": "ModelScope",
+          "apiKeyField": "OPENAI_API_KEY"
+        },
+        {
+          "app": "hermes",
+          "preset": "ModelScope",
+          "apiKeyField": "api_key"
+        },
+        {
+          "app": "openclaw",
+          "preset": "ModelScope",
+          "apiKeyField": "apiKey"
+        },
+        {
+          "app": "opencode",
+          "preset": "ModelScope",
+          "apiKeyField": "options.apiKey"
+        },
+        {
+          "app": "pi",
+          "preset": "ModelScope",
+          "apiKeyField": "apiKey"
+        }
+      ],
+      "websiteUrl": "https://modelscope.cn",
+      "apiKeyUrl": "https://modelscope.cn/my/myaccesstoken"
+    },
+    {
+      "id": "together-ai",
+      "name": "Together AI",
+      "baseUrl": "https://api.together.xyz/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://api.together.xyz/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "deepseek-ai/DeepSeek-V3.2",
+          "name": "DeepSeek V3.2",
+          "contextWindow": 64000
+        },
+        {
+          "id": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+          "name": "Llama 4 Maverick",
+          "contextWindow": 131072
+        },
+        {
+          "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+          "name": "Qwen3 Coder 480B",
+          "contextWindow": 262144
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "Together AI",
+          "apiKeyField": "api_key"
+        }
+      ],
+      "websiteUrl": "https://together.ai",
+      "apiKeyUrl": "https://api.together.ai/settings/api-keys"
+    },
+    {
+      "id": "aihubmix",
+      "name": "AiHubMix",
+      "baseUrl": "https://aihubmix.com/v1",
+      "protocol": "openai_chat",
+      "apiKey": null,
+      "auth": {
+        "type": "bearer",
+        "header": "Authorization",
+        "prefix": "Bearer "
+      },
+      "endpointCandidates": [
+        "https://aihubmix.com/v1"
+      ],
+      "categories": [
+        "aggregator"
+      ],
+      "models": [
+        {
+          "id": "gpt-5.6-sol",
+          "name": "GPT-5.6 Sol"
+        },
+        {
+          "id": "gpt-6-astra",
+          "name": "GPT-6 Astra",
+          "contextWindow": 1050000
+        }
+      ],
+      "sources": [
+        {
+          "app": "hermes",
+          "preset": "AiHubMix",
+          "apiKeyField": "api_key"
+        }
+      ],
+      "websiteUrl": "https://aihubmix.com",
+      "apiKeyUrl": "https://aihubmix.com"
+    }
+  ]
+}

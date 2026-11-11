@@ -1,0 +1,93 @@
+{
+  "manifest_version": 3,
+  "name": "JSeeker · Job Match",
+  "description": "支持 BOSS 直聘与猎聘，对照 CV 评分并处理达标职位。",
+  "version": "0.2.0",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.zhipin.com/*",
+    "https://zhipin.com/*",
+    "http://127.0.0.1/*",
+    "https://c.liepin.com/*",
+    "https://www.liepin.com/*",
+    "https://liepin.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "JSeeker · 匹配侧栏与设置"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.zhipin.com/web/geek/*",
+        "https://zhipin.com/web/geek/*"
+      ],
+      "js": [
+        "boss-chat.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.zhipin.com/web/geek/*",
+        "https://zhipin.com/web/geek/*"
+      ],
+      "js": ["boss-auto-reply.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.zhipin.com/web/geek/jobs*",
+        "https://zhipin.com/web/geek/jobs*",
+        "https://c.liepin.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.liepin.com/a/*.shtml*",
+        "https://www.liepin.com/job/*.shtml*",
+        "https://liepin.com/a/*.shtml*",
+        "https://liepin.com/job/*.shtml*"
+      ],
+      "js": [
+        "liepin-detail.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.liepin.com/a/*.shtml*",
+        "https://www.liepin.com/job/*.shtml*",
+        "https://liepin.com/a/*.shtml*",
+        "https://liepin.com/job/*.shtml*"
+      ],
+      "js": ["liepin-auto-read.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.zhipin.com/job_detail/*.html*",
+        "https://zhipin.com/job_detail/*.html*"
+      ],
+      "js": [
+        "boss-bonus-detail.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

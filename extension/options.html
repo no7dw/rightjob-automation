@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>JSeeker · 设置简历</title>
+    <style>
+      :root {
+        --ink: #d8f5ef;
+        --muted: #83a7a2;
+        --line: #31575a;
+        --panel: #0c2428;
+        --accent: #28c6ae;
+        --bg: #07181b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(#123438 1px, transparent 1px),
+          linear-gradient(90deg, #123438 1px, transparent 1px), var(--bg);
+        background-size: 24px 24px;
+        color: var(--ink);
+        font:
+          14px/1.6 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      main {
+        width: min(860px, calc(100% - 32px));
+        margin: 32px auto;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 94%, transparent);
+        box-shadow: 0 20px 80px #0008;
+      }
+      header,
+      section {
+        padding: 22px 24px;
+        border-bottom: 1px solid var(--line);
+      }
+      header {
+        display: flex;
+        gap: 16px;
+        align-items: baseline;
+      }
+      header strong {
+        color: var(--accent);
+        font-size: 18px;
+      }
+      h2 {
+        margin: 0 0 14px;
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 650;
+        letter-spacing: 0.08em;
+      }
+      label {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 12px;
+        align-items: center;
+        margin: 10px 0;
+      }
+      input[type="checkbox"] {
+        width: auto;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background: #071518;
+        color: var(--ink);
+        padding: 9px 10px;
+        font: inherit;
+      }
+      textarea {
+        height: 250px;
+        resize: vertical;
+        line-height: 1.5;
+      }
+      input[readonly] {
+        color: var(--muted);
+        cursor: default;
+      }
+      button {
+        border: 1px solid var(--accent);
+        border-radius: 3px;
+        background: #0e393b;
+        color: var(--ink);
+        padding: 8px 15px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #155052;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+      .hint {
+        margin: 8px 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .tag-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 100%;
+        margin: 8px 0;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      .tag {
+        display: inline-flex;
+        flex: 0 0 auto;
+        gap: 5px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #0e393b;
+        color: var(--ink);
+        padding: 4px 9px;
+        font-size: 12px;
+      }
+      .tag button {
+        padding: 0 4px;
+        border: 0;
+        background: none;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1;
+      }
+      .tag button:hover {
+        background: none;
+        color: var(--accent);
+      }
+      .tag-empty {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .status {
+        border: 1px dashed var(--line);
+        padding: 10px 12px;
+        margin: 12px 0;
+        color: var(--muted);
+        white-space: pre-wrap;
+      }
+      .ok {
+        color: var(--accent);
+      }
+      #message {
+        position: sticky;
+        bottom: 0;
+        padding: 12px 24px;
+        background: #102f32;
+        color: var(--ink);
+      }
+      details {
+        padding: 16px 24px;
+        color: var(--muted);
+      }
+      summary {
+        cursor: pointer;
+      }
+      @media (max-width: 640px) {
+        label {
+          grid-template-columns: 1fr;
+          gap: 5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <strong>+-- JSEEKER / SETTINGS</strong>
+        <span>简历、筛选与 LLM</span>
+      </header>
+      <section>
+        <h2>CV</h2>
+        <label>
+          <span>导入简历</span>
+          <input id="cv-file" type="file" accept=".md,.txt,text/plain" />
+        </label>
+        <label>
+          <span>画像全文</span>
+          <textarea id="cv" spellcheck="false"></textarea>
+        </label>
+        <p id="profile-meta" class="hint"></p>
+        <div class="actions">
+          <button id="save-cv" type="button">保存简历</button>
+        </div>
+      </section>
+      <section>
+        <h2>JD 黑名单</h2>
+        <label>
+          <span>关键词</span>
+          <input
+            id="blacklist"
+            type="text"
+            aria-label="JD 黑名单关键词"
+            placeholder="aaaa,bbbb,ccc"
+            disabled
+          />
+        </label>
+        <div
+          id="blacklist-tags"
+          class="tag-row"
+          role="list"
+          aria-label="JD 黑名单列表"
+        ></div>
+        <p class="hint">
+          逗号分隔，标题或 JD 命中任一词即跳过。自动保存；修改前请先暂停运行。
+        </p>
+        <p id="blacklist-status" class="hint" role="status">读取中...</p>
+      </section>
+      <section>
+        <h2>公司黑名单</h2>
+        <label>
+          <span>公司</span>
+          <input
+            id="company-blacklist"
+            type="text"
+            aria-label="公司黑名单"
+            placeholder="aaaa,bbbb,ccc"
+            disabled
+          />
+        </label>
+        <div
+          id="company-blacklist-tags"
+          class="tag-row"
+          role="list"
+          aria-label="公司黑名单列表"
+        ></div>
+        <p class="hint">
+          逗号分隔，公司名称命中任一词即跳过。自动保存；修改前请先暂停运行。
+        </p>
+        <p id="company-blacklist-status" class="hint" role="status">
+          读取中...
+        </p>
+      </section>
+      <section>
+        <h2>标题预筛</h2>
+        <label>
+          <span>启用预筛</span>
+          <input id="title-screen" type="checkbox" aria-label="启用标题预筛" />
+        </label>
+        <p class="hint">
+          开启后先按简历判断职位标题是否值得打开详情，明显不符的卡片直接跳过，
+          但每张卡片额外消耗一次模型请求。默认关闭：所有卡片直接采集评分。
+          修改即时生效。
+        </p>
+        <p id="title-screen-status" class="hint" role="status">读取中...</p>
+      </section>
+      <section>
+        <h2>LLM</h2>
+        <label>
+          <span>PROVIDER</span>
+          <select id="provider"></select>
+        </label>
+        <label>
+          <span>API KEY</span>
+          <input
+            id="api-key"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="输入 API Key，留空则使用 .env"
+          />
+        </label>
+        <label>
+          <span>BASE URL</span>
+          <input id="api-base" type="text" value="" />
+        </label>
+        <label>
+          <span>MODEL</span>
+          <select id="model"></select>
+          <input
+            id="model-custom"
+            type="text"
+            spellcheck="false"
+            placeholder="输入模型名称，留空使用 .env 的 OPENAI_MODEL"
+            style="display: none"
+          />
+        </label>
+        <label>
+          <span>REASONING</span>
+          <select id="reasoning-effort">
+            <option value="auto">Auto（GLM 低，其他默认）</option>
+            <option value="default">Provider default</option>
+            <option value="low">Low</option>
+          </select>
+        </label>
+        <div id="llm-status" class="status">读取 Helper 配置中...</div>
+        <div class="actions">
+          <button id="save-llm" type="button">保存设置</button>
+        </div>
+        <p class="hint">
+          Provider 与 Model 来自本地 BYOK 目录并自动联动。API Key 可以在这里覆盖
+          <code>.env</code>；覆盖值只保存在受信任扩展存储并发送给本机
+          Helper，不会回显或进入导出。
+        </p>
+      </section>
+      <details>
+        <summary>本地 Helper（高级）</summary>
+        <label>
+          <span>连接 Token</span>
+          <input id="token" type="password" autocomplete="off" />
+        </label>
+        <div class="actions">
+          <button id="save-token" type="button">保存连接 Token</button>
+        </div>
+        <p class="hint">
+          本项目扩展会自动配对，无需手动填写。此处仅用于旧版 Helper
+          或特殊安装目录， Token 保存在受信任扩展存储。本地 OCR 默认启用。
+        </p>
+      </details>
+      <div id="message" role="status">就绪</div>
+    </main>
+    <script src="options.js" type="module"></script>
+  </body>
+</html>

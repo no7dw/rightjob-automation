@@ -1,0 +1,40 @@
+{
+  "name": "rightjob-automation",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "import-cv": "node scripts/import-cv.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "python3 scripts/llm_flow_browser_test.py",
+    "test:setup": "python3 scripts/setup_browser_test.py",
+    "test:blacklist": "python3 scripts/blacklist_browser_test.py",
+    "helper:build": "swiftc helper/VisionOCR.swift -o helper/vision-ocr",
+    "helper": "node helper/server.mjs --project-env",
+    "verify": "npm run helper:build && npm test && npm run build && npm run test:llm && npm run test:ocr && npm run test:recovery",
+    "test:ocr": "python3 scripts/ocr_flow_browser_test.py",
+    "format": "prettier --write \"extension/*.{js,json,html,css}\" \"helper/*.mjs\" \"scripts/*.mjs\" \"tests/*.mjs\" package.json",
+    "test:recovery": "python3 scripts/recovery_browser_test.py",
+    "test:llm": "python3 scripts/llm_flow_browser_test.py",
+    "test:llm:mock": "JSEEKER_LLM_TEST_MODE=mock python3 scripts/llm_flow_browser_test.py",
+    "test:liepin": "python3 scripts/liepin_flow_browser_test.py",
+    "test:bonus": "python3 scripts/boss_bonus_browser_test.py",
+    "test:auto-reply": "python3 scripts/boss_auto_reply_browser_test.py",
+    "test:scope": "python3 scripts/scope_change_browser_test.py",
+    "test:speed": "node scripts/benchmark-model-latency.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "prettier": "^3.6.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.208.0",
+    "@opentelemetry/resources": "2.11.0",
+    "@opentelemetry/sdk-trace-base": "2.11.0"
+  }
+}

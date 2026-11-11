@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>JSeeker</title>
+    <style>
+      body {
+        width: 220px;
+        margin: 0;
+        padding: 14px;
+        background: #07181b;
+        color: #d8f5ef;
+        font:
+          14px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      h1 {
+        margin: 0 0 12px;
+        color: #28c6ae;
+        font-size: 16px;
+      }
+      button {
+        width: 100%;
+        border: 1px solid #31575a;
+        background: #0e393b;
+        color: #d8f5ef;
+        padding: 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: #28c6ae;
+      }
+      button + button {
+        margin-top: 8px;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #status {
+        margin: 10px 0 0;
+        color: #83a7a2;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>+-- JSEEKER</h1>
+    <button id="open-panel" type="button" disabled>打开匹配侧栏</button>
+    <button id="settings" type="button">设置简历</button>
+    <button id="auto-reply" type="button" disabled>自动回复消息</button>
+    <p id="status" role="status"></p>
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
