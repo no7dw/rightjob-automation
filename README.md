@@ -15,50 +15,24 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the architecture and for a step-by-st
 | Glassdoor | `glassdoor.com` | Planned — see [Roadmap](#roadmap) |
 | Indeed | `indeed.com` | Planned — see [Roadmap](#roadmap) |
 
-## Main workflow
+## Screenshots
 
-1. Use BOSS's native city, title, and job filters on the BOSS list page.
-2. The right-hand panel opens by default and provides the score threshold, major-city multi-select, run size, start/pause, retry-failures, new-batch, and CSV export controls.
-3. After clicking **Start**, jobs in the list that have not been processed yet are collected serially.
-4. Local OCR is enabled by default and needs no configuration in the main UI.
-5. The LLM returns a match score, which is rendered directly on the job card on the left.
-6. Jobs above the threshold automatically open the **Chat now** entry point without per-job confirmation. Bonus-item messages are submitted only when **auto-send** is enabled separately.
-7. Scored and contacted jobs are persisted by `job_id` and reused; they are never collected or applied to twice.
-8. If a card's location does not match the selected cities, it is skipped without opening the JD, calling OCR/LLM, or contacting anyone.
-9. **JD blacklist** and **company blacklist** in Settings accept comma-separated keywords (for example `outsourcing,on-site,sales`). Saved lists render as single-line tags with a `×` to remove and auto-save. A job is skipped when its title, JD, or OCR-supplemented text matches the JD blacklist, or its company name matches the company blacklist. English matches are case-insensitive. Skipped jobs are not scored, not contacted, and do not consume the run quota; cards and the side panel mark them. When a BOSS card title already matches the JD blacklist, the skip is recorded without opening the detail, running OCR, or waiting for the detail interval; otherwise the full JD is still checked. Clearing an input cancels that blacklist, and jobs that were only title-checked can be collected again on the next run. Pause the run before editing.
-10. **Title pre-screen** in Settings is off by default: every card opens its detail for collection and scoring. When enabled, each card first makes one LLM request against the CV; clearly unsuitable titles are skipped without opening the detail or scoring. The toggle takes effect immediately.
-11. The side panel can be hidden; the `J` button on the right edge restores it.
-12. BOSS adds **Auto-reply messages** (off by default). When checked, it clicks **Unread** on `/web/geek/chat`, and locally-classified clear rejections / unsuitable messages are opened automatically. When a message explicitly asks for a CV, it verifies the conversation counterpart and latest inbound message, then clicks **Send resume** → Chinese attachment → **Send**. It does not call the LLM; other messages stay unread. A Chinese attachment name must contain a standalone `CN` / `zh-CN` / `Chinese` marker, or `中文` / `简体` (for example `Sample-CV-cn.pdf`); when none is found or several Chinese attachments exist, the window is left open for manual selection. Send attempts are persisted for deduplication and are not retried automatically when the result is unconfirmed. Jobs with an existing resume-send/application record are skipped. Hidden tabs wait; manual interaction with the chat area pauses processing for that page, and toggling the checkbox resumes it. The chat page offers the same toggle and status without depending on the Helper or model configuration; only one chat page processes at a time, and bonus-draft handling yields automatically.
+**Live match scores in the side panel.** Every card shows the LLM score; jobs below the threshold or blocked by a blacklist are marked. The panel controls the threshold, city selection, run size, and CSV export.
 
-The BOSS chat page can also be started from the toolbar JSeeker icon → **Auto-reply messages**, without opening the side panel first. Pages that are already open but lack the chat script are injected automatically. Opening the popup during a run shows **Stop auto-reply**; after a manual pause, the popup shows **Auto-reply messages** again and clicking it resumes. After updating, reload the built `dist/` extension on the extension management page.
+![JSeeker match panel showing per-job scores on the BOSS job list](assets/seeker2.png)
 
-The chat side panel shows scan rounds, detected unread conversations, the rejection / CV-request / other classification, and processed counts. It displays a reason when a unique contact cannot be confirmed, the page structure is not recognized, or the resume window needs manual handling. BOSS unread counts messages, so the number may exceed the detected unread conversations.
+**Auto-reply on the BOSS chat page.** Clear rejections are opened and marked read; CV requests can send a Chinese attachment automatically, without calling the LLM.
 
-## Model speed test
+![JSeeker auto-reply panel on the BOSS chat page](assets/jseeker-msg.png)
 
-Run `npm run test:speed -- --help` for the options. By default it takes the latest collected JD and runs hello, real JD + CV returning only a score, the full production prompt in streaming mode, and the full production prompt in non-streaming mode, twice each. All default cases use `reasoning_effort: low`, temperature 0, and max_tokens 3000; the model and endpoint come from the specified configuration file.
+**Settings: CV and blacklists.** Import a Markdown CV, see the redacted profile version, and maintain separate JD, job-title, and company blacklists.
 
-Create a local `config.json` (do not commit credentials):
+![JSeeker settings page for CV import and blacklists](assets/jseeker-config.png)
 
-```json
-{
-  "llm_base_url": "http://localhost:8321/v1",
-  "llm_model": "glm-5.3-flash",
-  "llm_api_key_override": "YOUR_LOCAL_KEY"
-}
-```
+**Settings: LLM and runtime status.** Choose a BYOK provider and model, override the API key locally, and check Helper / LLM / local OCR readiness before starting.
 
-The CV file is JSON with a `text` field. Run against a real collected JD and a local CV:
+![JSeeker settings page for the LLM provider and runtime status](assets/jseeker-config2.png)
 
-```bash
-npm run test:speed -- --config /path/to/config.json --profile /path/to/profile.json \
-  --jobs data/logs/jd-items.jsonl --job-id liepin:job:1986214177 \
-  --repeats 2 --out artifacts/model-speed.json
-```
-
-Omit `--job-id` to take the latest JD from the log. Use `--cases production_stream_low,production_nonstream_low` to compare only the full scenarios, or adjust the budget with `--timeout-ms` and `--max-tokens`. Requests are serial and are not retried; the full scenarios reuse the production prompt and input truncation. The speed test sends the selected JD and CV to the configured model endpoint.
-
-The JSON output records response headers, first event/reasoning/content, total latency, token usage, returned model, and validation results for each call; a Markdown summary is generated next to it. Credentials, the full CV, and complete model output are not included. Non-streaming cannot measure time-to-first-token; the report distinguishes HTTP success from a valid business result, and small samples, caching, and server load affect the comparison.
 
 ## Installation
 
@@ -149,6 +123,51 @@ The API key input is editable directly:
 Clicking **Save settings** checks the Helper and model configuration and updates the READY / ERROR status above, then syncs the result to any open match panel. The panel also re-reads the configuration before each start.
 
 Choosing a provider that does not match `.env` uses that provider's Base URL. Changing provider, Base URL, or model marks old LLM scores as stale.
+
+## Main workflow
+
+1. Use BOSS's native city, title, and job filters on the BOSS list page.
+2. The right-hand panel opens by default and provides the score threshold, major-city multi-select, run size, start/pause, retry-failures, new-batch, and CSV export controls.
+3. After clicking **Start**, jobs in the list that have not been processed yet are collected serially.
+4. Local OCR is enabled by default and needs no configuration in the main UI.
+5. The LLM returns a match score, which is rendered directly on the job card on the left.
+6. Jobs above the threshold automatically open the **Chat now** entry point without per-job confirmation. Bonus-item messages are submitted only when **auto-send** is enabled separately.
+7. Scored and contacted jobs are persisted by `job_id` and reused; they are never collected or applied to twice.
+8. If a card's location does not match the selected cities, it is skipped without opening the JD, calling OCR/LLM, or contacting anyone.
+9. **JD blacklist** and **company blacklist** in Settings accept comma-separated keywords (for example `outsourcing,on-site,sales`). Saved lists render as single-line tags with a `×` to remove and auto-save. A job is skipped when its title, JD, or OCR-supplemented text matches the JD blacklist, or its company name matches the company blacklist. English matches are case-insensitive. Skipped jobs are not scored, not contacted, and do not consume the run quota; cards and the side panel mark them. When a BOSS card title already matches the JD blacklist, the skip is recorded without opening the detail, running OCR, or waiting for the detail interval; otherwise the full JD is still checked. Clearing an input cancels that blacklist, and jobs that were only title-checked can be collected again on the next run. Pause the run before editing.
+10. **Title pre-screen** in Settings is off by default: every card opens its detail for collection and scoring. When enabled, each card first makes one LLM request against the CV; clearly unsuitable titles are skipped without opening the detail or scoring. The toggle takes effect immediately.
+11. The side panel can be hidden; the `J` button on the right edge restores it.
+12. BOSS adds **Auto-reply messages** (off by default). When checked, it clicks **Unread** on `/web/geek/chat`, and locally-classified clear rejections / unsuitable messages are opened automatically. When a message explicitly asks for a CV, it verifies the conversation counterpart and latest inbound message, then clicks **Send resume** → Chinese attachment → **Send**. It does not call the LLM; other messages stay unread. A Chinese attachment name must contain a standalone `CN` / `zh-CN` / `Chinese` marker, or `中文` / `简体` (for example `Sample-CV-cn.pdf`); when none is found or several Chinese attachments exist, the window is left open for manual selection. Send attempts are persisted for deduplication and are not retried automatically when the result is unconfirmed. Jobs with an existing resume-send/application record are skipped. Hidden tabs wait; manual interaction with the chat area pauses processing for that page, and toggling the checkbox resumes it. The chat page offers the same toggle and status without depending on the Helper or model configuration; only one chat page processes at a time, and bonus-draft handling yields automatically.
+
+The BOSS chat page can also be started from the toolbar JSeeker icon → **Auto-reply messages**, without opening the side panel first. Pages that are already open but lack the chat script are injected automatically. Opening the popup during a run shows **Stop auto-reply**; after a manual pause, the popup shows **Auto-reply messages** again and clicking it resumes. After updating, reload the built `dist/` extension on the extension management page.
+
+The chat side panel shows scan rounds, detected unread conversations, the rejection / CV-request / other classification, and processed counts. It displays a reason when a unique contact cannot be confirmed, the page structure is not recognized, or the resume window needs manual handling. BOSS unread counts messages, so the number may exceed the detected unread conversations.
+
+## Model speed test
+
+Run `npm run test:speed -- --help` for the options. By default it takes the latest collected JD and runs hello, real JD + CV returning only a score, the full production prompt in streaming mode, and the full production prompt in non-streaming mode, twice each. All default cases use `reasoning_effort: low`, temperature 0, and max_tokens 3000; the model and endpoint come from the specified configuration file.
+
+Create a local `config.json` (do not commit credentials):
+
+```json
+{
+  "llm_base_url": "http://localhost:8321/v1",
+  "llm_model": "glm-5.3-flash",
+  "llm_api_key_override": "YOUR_LOCAL_KEY"
+}
+```
+
+The CV file is JSON with a `text` field. Run against a real collected JD and a local CV:
+
+```bash
+npm run test:speed -- --config /path/to/config.json --profile /path/to/profile.json \
+  --jobs data/logs/jd-items.jsonl --job-id liepin:job:1986214177 \
+  --repeats 2 --out artifacts/model-speed.json
+```
+
+Omit `--job-id` to take the latest JD from the log. Use `--cases production_stream_low,production_nonstream_low` to compare only the full scenarios, or adjust the budget with `--timeout-ms` and `--max-tokens`. Requests are serial and are not retried; the full scenarios reuse the production prompt and input truncation. The speed test sends the selected JD and CV to the configured model endpoint.
+
+The JSON output records response headers, first event/reasoning/content, total latency, token usage, returned model, and validation results for each call; a Markdown summary is generated next to it. Credentials, the full CV, and complete model output are not included. Non-streaming cannot measure time-to-first-token; the report distinguishes HTTP success from a valid business result, and small samples, caching, and server load affect the comparison.
 
 ### LangSmith tracing
 

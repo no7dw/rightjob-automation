@@ -114,7 +114,7 @@ async def main():
                     exact=True,
                 ).click()
                 await expect(options.locator("#llm-status")).to_contain_text(
-                    "LLM     READY"
+                    "LLM      已配置"
                 )
                 page = await context.new_page()
                 await page.goto("https://www.zhipin.com/web/geek/jobs")

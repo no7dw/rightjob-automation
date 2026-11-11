@@ -79,7 +79,7 @@ test("pairing rejection gives actionable error and never sends workload", async 
     assert.ok(url.endsWith("/pair"));
     return json({}, 403);
   });
-  await assert.rejects(request(17373, "/evaluate", {}), /重启新版 Helper/);
+  await assert.rejects(request(17373, "/evaluate", {}), /无法自动连接本地服务/);
 });
 
 test("offline Helper reports startup instructions", async () => {

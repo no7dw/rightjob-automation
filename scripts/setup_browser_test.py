@@ -39,8 +39,8 @@ async def main():
                     await worker.evaluate("async port => { await chrome.storage.local.set({helper_port: port}); }", port)
                     options = await context.new_page()
                     await options.goto(f"chrome-extension://{extension_id}/options.html")
-                    await expect(options.locator("#llm-status")).to_contain_text("HELPER  READY")
-                    await expect(options.locator("#llm-status")).to_contain_text("LLM     READY")
+                    await expect(options.locator("#llm-status")).to_contain_text("SERVICE  已连接")
+                    await expect(options.locator("#llm-status")).to_contain_text("LLM      已配置")
                     assert await options.locator("#health, #clear-api-key").count() == 0
                     assert await worker.evaluate("async () => !!(await chrome.storage.local.get('helper_token_persisted')).helper_token_persisted")
                     await options.screenshot(path=ART / "setup-pairing.png", full_page=True)
@@ -48,7 +48,7 @@ async def main():
                     # Stale credentials are replaced automatically after a 401.
                     await worker.evaluate("async () => { await chrome.storage.local.set({helper_token_persisted:'stale'}); await chrome.storage.session.set({helper_token:'stale'}); }")
                     await options.reload()
-                    await expect(options.locator("#llm-status")).to_contain_text("HELPER  READY")
+                    await expect(options.locator("#llm-status")).to_contain_text("SERVICE  已连接")
                     assert await worker.evaluate("async () => (await chrome.storage.local.get('helper_token_persisted')).helper_token_persisted !== 'stale'")
 
                     await context.route("https://www.zhipin.com/**", lambda route: route.fulfill(content_type="text/html", body=(ROOT / "tests/fixture.html").read_text()))
@@ -86,12 +86,12 @@ async def main():
                     await boss.get_by_role("button", name="开始", exact=True).click()
                     await expect(boss.locator("#jseeker-root .error")).to_contain_text("无法连接本地 Helper")
                     await options.locator("#save-llm").click()
-                    await expect(options.locator("#llm-status")).to_contain_text("HELPER  ERROR")
+                    await expect(options.locator("#llm-status")).to_contain_text("SERVICE  未连接")
                     await expect(options.locator("#message")).to_contain_text("设置已保存，检查失败")
                     await worker.evaluate("async port => chrome.storage.local.set({helper_port:port,selected_cities:['广州']})", port)
                     await options.locator("#save-llm").click()
-                    await expect(options.locator("#llm-status")).to_contain_text("LLM     READY")
-                    await expect(options.locator("#message")).to_contain_text("设置已保存，Helper 与 LLM 配置可用")
+                    await expect(options.locator("#llm-status")).to_contain_text("LLM      已配置")
+                    await expect(options.locator("#message")).to_contain_text("设置已保存，本地服务与模型配置可用")
                     await expect(boss.locator("#jseeker-root .error")).to_have_count(0)
                     await options.screenshot(path=ART / "setup-pairing.png", full_page=True)
 
