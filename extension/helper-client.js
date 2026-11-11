@@ -8,7 +8,7 @@ export function createHelperClient(
       { cache: "no-store" },
     );
     if (!response.ok)
-      throw new Error("缺少本机配对凭据，请运行 npm run build 后重新加载扩展");
+      throw new Error("缺少本地服务配对凭据，请运行 npm run build 后重新加载扩展");
     return (await response.json()).key;
   },
 ) {
@@ -19,7 +19,7 @@ export function createHelperClient(
         const key = await loadPairingKey();
         if (typeof key !== "string" || !key.trim())
           throw new Error(
-            "本机配对凭据无效，请运行 npm run build 后重新加载扩展",
+            "本地服务配对凭据无效，请运行 npm run build 后重新加载扩展",
           );
         const response = await fetchImpl(`http://127.0.0.1:${port}/pair`, {
           method: "POST",
@@ -32,11 +32,11 @@ export function createHelperClient(
         });
         if (!response.ok)
           throw new Error(
-            "Helper 自动配对失败，请重启新版 Helper；非本项目目录加载的扩展可在高级设置填写连接 Token",
+            "无法自动连接本地服务。请确认已在项目目录运行 ./restart.sh，并从本项目的 dist/ 加载扩展；其他安装方式可在「高级」中手动填写连接 Token",
           );
         const data = await response.json();
         if (typeof data.token !== "string" || !data.token.trim())
-          throw new Error("Helper 自动配对响应无效");
+          throw new Error("本地服务配对响应无效");
         const token = data.token.trim();
         await storage.local.set({ helper_token_persisted: token });
         await storage.session.set({ helper_token: token });
@@ -73,7 +73,7 @@ export function createHelperClient(
     } catch (error) {
       if (error instanceof TypeError)
         throw new Error(
-          `无法连接本地 Helper（127.0.0.1:${port}），请在项目目录运行 npm run helper`,
+          `无法连接本地服务（127.0.0.1:${port}）。请在项目目录运行 ./restart.sh 或 npm run helper`,
         );
       throw error;
     }

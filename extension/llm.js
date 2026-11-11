@@ -38,7 +38,7 @@ export async function scoringHelperError(meta) {
     const expected = [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
     current = meta.version === expected;
   }
-  return current ? "" : "Helper 评分提示版本过旧，请运行 ./restart.sh 更新 Helper，再刷新职位页重新评分";
+  return current ? "" : "本地服务的评分提示版本过旧，请运行 ./restart.sh 重启服务，再刷新职位页重新评分";
 }
 
 export function parseModelJSON(text) {

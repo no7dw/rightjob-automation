@@ -287,7 +287,7 @@ async def main():
                     "button", name="保存设置", exact=True
                 ).click()
                 await expect(options.locator("#llm-status")).to_contain_text(
-                    "LLM     READY"
+                    "LLM      已配置"
                 )
                 await expect(options.locator("#api-key")).to_have_value("")
                 if use_mock:

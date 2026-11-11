@@ -60,7 +60,7 @@ async def main():
                     await worker.evaluate("async port => chrome.storage.local.set({helper_port:port,run_target:1,match_threshold:100,selected_cities:['深圳','上海']})", port)
                     options = await context.new_page()
                     await options.goto(f"chrome-extension://{eid}/options.html")
-                    await expect(options.locator("#llm-status")).to_contain_text("LLM     READY")
+                    await expect(options.locator("#llm-status")).to_contain_text("LLM      已配置")
                     await worker.evaluate("async () => chrome.storage.local.set({run_target:1,match_threshold:100,selected_cities:['深圳','上海']})")
                     fixture = (ROOT / "tests/fixture.html").read_text().replace("n<=35", "n<=3")
                     fixture = fixture.replace("detail.querySelector('#chat').onclick", "if(id==='job1')detail.querySelector('.desc').textContent+=' aAaA ';if(id==='job2')detail.querySelector('.job-name').textContent='BBBB role';detail.querySelector('#chat').onclick")

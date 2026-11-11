@@ -220,7 +220,7 @@ async function localRequest(path, body = {}, signal = null) {
       error: error.message,
     });
     if (error.name === "TimeoutError" || error.name === "AbortError")
-      throw new Error("本地 Helper 请求超时，请检查 Helper 和模型服务");
+      throw new Error("本地服务请求超时，请确认服务仍在运行，并检查模型网络。");
     throw error;
   }
   clearInterval(heartbeat);
@@ -234,7 +234,7 @@ async function localRequest(path, body = {}, signal = null) {
     error: response.ok ? undefined : data.error,
   });
   if (!response.ok)
-    throw Object.assign(new Error(data.error || `Helper HTTP ${response.status}`), { status: response.status });
+    throw Object.assign(new Error(data.error || `本地服务 HTTP ${response.status}`), { status: response.status });
   return data;
 }
 

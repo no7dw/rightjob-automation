@@ -184,8 +184,78 @@
     <main>
       <header>
         <strong>+-- JSEEKER / SETTINGS</strong>
-        <span>简历、筛选与 LLM</span>
+        <span>简历、筛选与模型配置</span>
       </header>
+      <section>
+        <h2>运行状态</h2>
+        <div id="llm-status" class="status">正在读取本地服务状态…</div>
+        <p class="hint">
+          <strong>本地服务（JSeeker Service）</strong>是本项目自带的后端进程，负责调用模型并保管
+          API Key、本地 OCR 截图识别、记录 JD 日志与耗时（可选 LangSmith trace）。
+          <strong>评分和自动沟通都依赖它，不是可选项。</strong>
+        </p>
+        <p class="hint">
+          推荐顺序：① 启动本地服务 → ② 在「模型」中配置 Provider 与 API Key → ③ 导入简历。
+        </p>
+        <p class="hint">
+          本地 OCR 需要先在项目目录运行 <code>npm run helper:build</code>（仅 macOS）。
+          状态显示「本地未就绪」时，构建后重启服务即可。
+        </p>
+        <p class="hint">
+          首次使用：在项目目录运行 <code>./restart.sh</code>（或 <code>npm run helper</code>）。
+          服务启动后扩展会自动配对，无需手动填写 Token；点击「刷新状态」可重新检测。
+        </p>
+        <div class="actions">
+          <button id="refresh-status" type="button">刷新状态</button>
+        </div>
+      </section>
+      <section>
+        <h2>模型（LLM）</h2>
+        <p class="hint">
+          使用你自己的模型服务（BYOK）。Provider 与 Model 来自本地目录并自动联动；API Key
+          可在此覆盖项目根目录 <code>.env</code> 中的值。Key 只保存在本机扩展存储并发送给本地服务，不会回显或进入导出。
+        </p>
+        <label>
+          <span>PROVIDER</span>
+          <select id="provider"></select>
+        </label>
+        <label>
+          <span>API KEY</span>
+          <input
+            id="api-key"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="输入 API Key，留空则使用 .env"
+          />
+        </label>
+        <label>
+          <span>BASE URL</span>
+          <input id="api-base" type="text" value="" />
+        </label>
+        <label>
+          <span>MODEL</span>
+          <select id="model"></select>
+          <input
+            id="model-custom"
+            type="text"
+            spellcheck="false"
+            placeholder="输入模型名称，留空使用 .env 的 OPENAI_MODEL"
+            style="display: none"
+          />
+        </label>
+        <label>
+          <span>REASONING</span>
+          <select id="reasoning-effort">
+            <option value="auto">Auto（GLM 低，其他默认）</option>
+            <option value="default">Provider default</option>
+            <option value="low">Low</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button id="save-llm" type="button">保存模型设置</button>
+        </div>
+      </section>
       <section>
         <h2>CV</h2>
         <label>
@@ -262,57 +332,8 @@
         </p>
         <p id="title-screen-status" class="hint" role="status">读取中...</p>
       </section>
-      <section>
-        <h2>LLM</h2>
-        <label>
-          <span>PROVIDER</span>
-          <select id="provider"></select>
-        </label>
-        <label>
-          <span>API KEY</span>
-          <input
-            id="api-key"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="输入 API Key，留空则使用 .env"
-          />
-        </label>
-        <label>
-          <span>BASE URL</span>
-          <input id="api-base" type="text" value="" />
-        </label>
-        <label>
-          <span>MODEL</span>
-          <select id="model"></select>
-          <input
-            id="model-custom"
-            type="text"
-            spellcheck="false"
-            placeholder="输入模型名称，留空使用 .env 的 OPENAI_MODEL"
-            style="display: none"
-          />
-        </label>
-        <label>
-          <span>REASONING</span>
-          <select id="reasoning-effort">
-            <option value="auto">Auto（GLM 低，其他默认）</option>
-            <option value="default">Provider default</option>
-            <option value="low">Low</option>
-          </select>
-        </label>
-        <div id="llm-status" class="status">读取 Helper 配置中...</div>
-        <div class="actions">
-          <button id="save-llm" type="button">保存设置</button>
-        </div>
-        <p class="hint">
-          Provider 与 Model 来自本地 BYOK 目录并自动联动。API Key 可以在这里覆盖
-          <code>.env</code>；覆盖值只保存在受信任扩展存储并发送给本机
-          Helper，不会回显或进入导出。
-        </p>
-      </section>
       <details>
-        <summary>本地 Helper（高级）</summary>
+        <summary>高级：手动连接本地服务</summary>
         <label>
           <span>连接 Token</span>
           <input id="token" type="password" autocomplete="off" />
@@ -321,8 +342,9 @@
           <button id="save-token" type="button">保存连接 Token</button>
         </div>
         <p class="hint">
-          本项目扩展会自动配对，无需手动填写。此处仅用于旧版 Helper
-          或特殊安装目录， Token 保存在受信任扩展存储。本地 OCR 默认启用。
+          通常无需填写。只有当扩展不是从本项目的 <code>dist/</code> 加载，
+          或使用旧版本地服务时，才需要手动填写连接 Token。
+          Token 保存在受信任扩展存储；本地 OCR 随服务一起提供。
         </p>
       </details>
       <div id="message" role="status">就绪</div>

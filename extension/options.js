@@ -246,12 +246,12 @@ function renderLLM(status = {}, apiKeyOverride = false) {
       ? ".env Key 已配置；输入可覆盖"
       : "输入 API Key，留空则使用 .env";
   const lines = [
-    `HELPER  ${status.error ? "ERROR" : "READY"}`,
-    `LLM     ${status.configured ? "READY" : "NOT CONFIGURED"}`,
-    `OCR     ${status.ocr_ready ? "LOCAL / READY" : "LOCAL / NOT READY"}`,
-    `MODEL   ${status.model || "未设置"}`,
+    `SERVICE  ${status.error ? "未连接" : "已连接"}`,
+    `LLM      ${status.configured ? "已配置" : "未配置"}`,
+    `OCR      ${status.ocr_ready ? "本地可用" : "本地未就绪"}`,
+    `MODEL    ${status.model || "未设置"}`,
   ];
-  if (status.error) lines.push(`MESSAGE ${status.error}`);
+  if (status.error) lines.push(`提示     ${status.error}`);
   $("#llm-status").textContent = lines.join("\n");
   $("#llm-status").classList.toggle("ok", !!status.configured);
   if (!$("#api-base").value) $("#api-base").value = status.base_url || "";
@@ -333,7 +333,7 @@ $("#save-cv").onclick = action(async () => {
 });
 
 $("#save-llm").onclick = action(async () => {
-  $("#llm-status").textContent = "正在保存并向模型发送验证请求...";
+  $("#llm-status").textContent = "正在保存并验证模型配置…";
   $("#llm-status").classList.remove("ok");
   let status;
   try {
@@ -362,7 +362,7 @@ $("#save-llm").onclick = action(async () => {
   return status.error
     ? `设置已保存，检查失败：${status.error}`
     : status.configured
-      ? "设置已保存，Helper 与 LLM 配置可用"
+      ? "设置已保存，本地服务与模型配置可用"
       : "设置已保存，LLM 尚未配置，请选择模型并检查 Base URL";
 });
 
@@ -376,6 +376,11 @@ $("#save-token").onclick = action(async () => {
   });
   currentConfig.status = status;
   applyConfiguration(currentConfig);
+});
+
+$("#refresh-status").onclick = action(async () => {
+  await refresh();
+  $("#message").textContent = "状态已刷新";
 });
 
 try {
