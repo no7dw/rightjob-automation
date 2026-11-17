@@ -268,24 +268,38 @@ async function refresh({ refreshPay = false } = {}) {
 }
 
 function setupNav() {
-  const links = [...document.querySelectorAll("#settings-nav a[data-sec]")].filter(
-    (link) => link.offsetParent !== null || !link.classList.contains("pay-only"),
-  );
-  // Keep document order; ignore hidden premium links in community builds.
+  const links = [...document.querySelectorAll("#settings-nav a[data-sec]")];
   const items = links
     .map((link) => ({
       link,
       id: link.dataset.sec,
       section: document.getElementById(link.dataset.sec),
     }))
-    .filter((item) => item.section && item.section.offsetParent !== null);
+    .filter((item) => item.section && !item.section.hasAttribute("hidden"));
+
+  // Scroll-spy must follow document Y order, not left-nav label order.
+  function orderedItems() {
+    return items
+      .filter((item) => {
+        const style = getComputedStyle(item.section);
+        const linkStyle = getComputedStyle(item.link);
+        return style.display !== "none" && linkStyle.display !== "none";
+      })
+      .sort(
+        (a, b) =>
+          a.section.getBoundingClientRect().top + window.scrollY -
+          (b.section.getBoundingClientRect().top + window.scrollY),
+      );
+  }
 
   let activeId = "";
-  let clicking = false;
-  let clickTimer = 0;
+  let lockedId = "";
+  let lockTimer = 0;
 
-  function setActive(id) {
-    if (!id || id === activeId) return;
+  function setActive(id, { force = false } = {}) {
+    if (!id) return;
+    if (!force && lockedId && id !== lockedId) return;
+    if (id === activeId) return;
     activeId = id;
     for (const item of items)
       item.link.classList.toggle("active", item.id === id);
@@ -293,46 +307,57 @@ function setupNav() {
 
   function topOffset() {
     const topbar = document.querySelector(".topbar");
-    return (topbar?.getBoundingClientRect().height || 56) + 20;
+    return (topbar?.getBoundingClientRect().height || 56) + 12;
   }
 
-  // Activate the last section whose top has crossed the sticky header line.
-  // This stays monotonic with scroll direction and avoids IO flicker.
   function syncFromScroll() {
-    if (clicking) return;
+    const list = orderedItems();
+    if (!list.length) return;
     const line = topOffset();
-    let current = items[0]?.id || "";
-    for (const item of items) {
+    let current = list[0].id;
+    for (const item of list) {
       const top = item.section.getBoundingClientRect().top;
-      if (top - line <= 1) current = item.id;
-      else break;
+      if (top - line <= 2) current = item.id;
     }
-    // Near page bottom: force the last section so the final nav item can stick.
     const scrollRoot = document.scrollingElement || document.documentElement;
     const atBottom =
       scrollRoot.scrollTop + window.innerHeight >= scrollRoot.scrollHeight - 8;
-    if (atBottom && items.length) current = items[items.length - 1].id;
+    if (atBottom) current = list[list.length - 1].id;
     setActive(current);
+  }
+
+  function scrollToSection(section) {
+    const y =
+      section.getBoundingClientRect().top + window.scrollY - topOffset() + 1;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
   }
 
   for (const item of items) {
     item.link.addEventListener("click", (event) => {
       event.preventDefault();
-      clicking = true;
-      clearTimeout(clickTimer);
-      setActive(item.id);
-      item.section.scrollIntoView({ behavior: "smooth", block: "start" });
+      lockedId = item.id;
+      clearTimeout(lockTimer);
+      setActive(item.id, { force: true });
+      scrollToSection(item.section);
       history.replaceState(null, "", `#${item.id}`);
-      clickTimer = window.setTimeout(() => {
-        clicking = false;
+      // Keep highlight locked until smooth scroll finishes.
+      lockTimer = window.setTimeout(() => {
+        lockedId = "";
         syncFromScroll();
-      }, 450);
+      }, 800);
     });
   }
 
   window.addEventListener("scroll", syncFromScroll, { passive: true });
   window.addEventListener("resize", syncFromScroll);
-  syncFromScroll();
+  const hashId = location.hash.replace(/^#/, "");
+  if (hashId && items.some((item) => item.id === hashId)) {
+    const target = items.find((item) => item.id === hashId);
+    setActive(hashId, { force: true });
+    requestAnimationFrame(() => scrollToSection(target.section));
+  } else {
+    syncFromScroll();
+  }
 }
 
 $("#provider").onchange = () => {
