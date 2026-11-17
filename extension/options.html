@@ -210,6 +210,43 @@
         cursor: pointer;
       }
       .account-btn:hover { border-color: var(--accent); }
+      .account-cluster {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .account-refresh {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #071518;
+        color: var(--muted);
+        cursor: pointer;
+        flex: 0 0 auto;
+      }
+      .account-refresh:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .account-refresh:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .account-refresh svg {
+        width: 14px;
+        height: 14px;
+        display: block;
+      }
+      .account-refresh.spinning svg {
+        animation: account-spin 0.7s linear infinite;
+      }
+      @keyframes account-spin {
+        to { transform: rotate(360deg); }
+      }
       .avatar {
         width: 26px; height: 26px; border-radius: 50%;
         display: grid; place-items: center;
@@ -287,13 +324,28 @@
         </div>
         <div class="top-right">
           <div class="account-chip" id="account-chip">
-            <button type="button" class="account-btn" id="account-btn" aria-haspopup="menu" aria-expanded="false">
-              <span class="avatar" id="account-avatar">?</span>
-              <span class="account-meta">
-                <span class="email" id="account-email">登录</span>
-                <span class="quota" id="account-quota">托管评分</span>
-              </span>
-            </button>
+            <div class="account-cluster">
+              <button type="button" class="account-btn" id="account-btn" aria-haspopup="menu" aria-expanded="false">
+                <span class="avatar" id="account-avatar">?</span>
+                <span class="account-meta">
+                  <span class="email" id="account-email">登录</span>
+                  <span class="quota" id="account-quota">托管评分</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="account-refresh"
+                id="pay-refresh"
+                title="同步额度"
+                aria-label="同步额度"
+                hidden
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 12a9 9 0 1 1-2.1-5.7" />
+                  <polyline points="21 3 21 9 15 9" />
+                </svg>
+              </button>
+            </div>
             <div class="account-menu" id="account-menu" role="menu">
               <div id="account-logged-out">
                 <h3>邮箱登录</h3>
@@ -317,7 +369,6 @@
                 <h3>账号</h3>
                 <p class="hint" id="account-detail" style="margin-top:0"></p>
                 <div class="row-inline">
-                  <button type="button" class="ghost" id="pay-refresh">同步额度</button>
                   <button type="button" class="ghost" id="pay-logout">退出</button>
                 </div>
               </div>
@@ -363,7 +414,7 @@
         <section class="panel pay-only" id="sec-hosted">
           <h2>托管评分</h2>
           <p class="hint">
-            登录后使用服务端公共模型 Key，无需自备 API Key。额度按成功沟通计数；设置页打开、同步额度或沟通扣费时更新。
+            登录后使用服务端公共模型 Key，无需自备 API Key。额度按成功沟通计数；点击右上角刷新图标同步额度；沟通扣费会即时更新。
           </p>
           <label class="row">
             <span>云端地址</span>

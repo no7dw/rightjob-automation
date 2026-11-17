@@ -16,7 +16,6 @@ export function createPaySettings({ api, action, $, getModelContext, setMessage 
     };
   }
 
-  let timer = 0;
   let menuOpen = false;
 
   function setOpen(open) {
@@ -46,6 +45,7 @@ export function createPaySettings({ api, action, $, getModelContext, setMessage 
     if ($("#llm-mode"))
       $("#llm-mode").value = config.mode === "byok" ? "byok" : "hosted";
 
+    const refreshBtn = $("#pay-refresh");
     if (loggedIn) {
       emailEl.textContent = user.email;
       quotaEl.textContent = `额度 ${user.quota_remaining}/${user.quota_total} · ${user.plan || "trial"}`;
@@ -56,12 +56,14 @@ export function createPaySettings({ api, action, $, getModelContext, setMessage 
         user.enabled === false ? "已停用" : "可用",
         pay.cached ? "缓存中" : "已同步",
       ].join(" · ");
+      if (refreshBtn) refreshBtn.hidden = false;
     } else {
       emailEl.textContent = "登录";
       quotaEl.textContent = "托管评分";
       avatar.textContent = "?";
       out.hidden = false;
       inn.hidden = true;
+      if (refreshBtn) refreshBtn.hidden = true;
     }
 
     const ageSec =
@@ -156,18 +158,28 @@ export function createPaySettings({ api, action, $, getModelContext, setMessage 
       }),
     );
 
-    $("#pay-refresh")?.addEventListener(
-      "click",
-      action(async () => {
+    $("#pay-refresh")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const btn = $("#pay-refresh");
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      btn.classList.add("spinning");
+      try {
         const result = await refreshPay();
         renderChip({
           mode: result.mode,
           cloud_base_url: result.cloud_base_url,
           pay: result.pay,
         });
-        return "额度已同步";
-      }),
-    );
+        setMessage?.("额度已同步");
+      } catch (error) {
+        setMessage?.(error.message || "同步失败");
+      } finally {
+        btn.classList.remove("spinning");
+        btn.disabled = false;
+      }
+    });
 
     $("#pay-save-mode")?.addEventListener(
       "click",
@@ -211,22 +223,7 @@ export function createPaySettings({ api, action, $, getModelContext, setMessage 
         setMessage?.(error.message);
         renderChip({ pay: { logged_in: false, error: error.message } });
       }
-      timer = window.setInterval(async () => {
-        try {
-          const result = await refreshPay();
-          renderChip({
-            mode: result.mode,
-            cloud_base_url: result.cloud_base_url,
-            pay: result.pay,
-          });
-        } catch {
-          /* ignore */
-        }
-      }, 60_000);
-      window.addEventListener("beforeunload", () => clearInterval(timer));
     },
-    dispose() {
-      clearInterval(timer);
-    },
+    dispose() {},
   };
 }
