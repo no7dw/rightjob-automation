@@ -411,70 +411,6 @@
           </div>
         </section>
 
-        <section class="panel pay-only" id="sec-hosted">
-          <h2>托管评分</h2>
-          <p class="hint">
-            登录后使用服务端公共模型 Key，无需自备 API Key。额度按成功沟通计数；点击右上角刷新图标同步额度；沟通扣费会即时更新。
-          </p>
-          <label class="row">
-            <span>云端地址</span>
-            <input id="cloud-base" type="text" spellcheck="false" placeholder="http://127.0.0.1:17373" />
-          </label>
-          <label class="row">
-            <span>评分模式</span>
-            <select id="llm-mode">
-              <option value="hosted">托管（公共 Key）</option>
-              <option value="byok">高级 BYOK（自备 Key）</option>
-            </select>
-          </label>
-          <div class="actions">
-            <button id="pay-save-mode" type="button">保存托管设置</button>
-          </div>
-          <pre id="pay-status" class="status" hidden></pre>
-        </section>
-
-        <section class="panel" id="sec-model">
-          <h2>模型（LLM）</h2>
-          <p class="hint" id="byok-hint">
-            社区版 / BYOK：Provider 与 Model 来自本地目录；API Key 可覆盖项目 <code>.env</code>。
-            Key 只保存在本机扩展存储。
-          </p>
-          <label class="row">
-            <span>PROVIDER</span>
-            <select id="provider"></select>
-          </label>
-          <label class="row">
-            <span>API KEY</span>
-            <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入 API Key，留空则使用 .env" />
-          </label>
-          <label class="row">
-            <span>BASE URL</span>
-            <input id="api-base" type="text" value="" />
-          </label>
-          <label class="row">
-            <span>MODEL</span>
-            <select id="model"></select>
-          </label>
-          <input
-            id="model-custom"
-            type="text"
-            spellcheck="false"
-            placeholder="输入模型名称，留空使用 .env 的 OPENAI_MODEL"
-            style="display: none; margin: 8px 0 0"
-          />
-          <label class="row">
-            <span>REASONING</span>
-            <select id="reasoning-effort">
-              <option value="auto">Auto（GLM 低，其他默认）</option>
-              <option value="default">Provider default</option>
-              <option value="low">Low</option>
-            </select>
-          </label>
-          <div class="actions">
-            <button id="save-llm" type="button">保存模型设置</button>
-          </div>
-        </section>
-
         <section class="panel" id="sec-cv">
           <h2>简历</h2>
           <label class="row">
@@ -523,6 +459,48 @@
           <p id="title-screen-status" class="hint" role="status">读取中...</p>
         </section>
 
+        <section class="panel" id="sec-model">
+          <h2>模型（LLM）</h2>
+          <p class="hint" id="byok-hint">
+            社区版 / BYOK：Provider 与 Model 来自本地目录；API Key 可覆盖项目 <code>.env</code>。
+            Key 只保存在本机扩展存储。
+          </p>
+          <label class="row">
+            <span>PROVIDER</span>
+            <select id="provider"></select>
+          </label>
+          <label class="row">
+            <span>API KEY</span>
+            <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="输入 API Key，留空则使用 .env" />
+          </label>
+          <label class="row">
+            <span>BASE URL</span>
+            <input id="api-base" type="text" value="" />
+          </label>
+          <label class="row">
+            <span>MODEL</span>
+            <select id="model"></select>
+          </label>
+          <input
+            id="model-custom"
+            type="text"
+            spellcheck="false"
+            placeholder="输入模型名称，留空使用 .env 的 OPENAI_MODEL"
+            style="display: none; margin: 8px 0 0"
+          />
+          <label class="row">
+            <span>REASONING</span>
+            <select id="reasoning-effort">
+              <option value="auto">Auto（GLM 低，其他默认）</option>
+              <option value="default">Provider default</option>
+              <option value="low">Low</option>
+            </select>
+          </label>
+          <div class="actions">
+            <button id="save-llm" type="button">保存模型设置</button>
+          </div>
+        </section>
+
         <section class="panel" id="sec-advanced">
           <h2>高级连接</h2>
           <details class="advanced" open>
@@ -538,6 +516,28 @@
               通常无需填写。仅当扩展不是从本项目 <code>dist/</code> 加载或使用旧 Helper 时需要。
             </p>
           </details>
+        </section>
+
+        <section class="panel pay-only" id="sec-hosted">
+          <h2>托管评分</h2>
+          <p class="hint">
+            登录后使用服务端公共模型 Key，无需自备 API Key。额度按成功沟通计数；点击右上角刷新图标同步额度；沟通扣费会即时更新。
+          </p>
+          <label class="row">
+            <span>云端地址</span>
+            <input id="cloud-base" type="text" spellcheck="false" placeholder="http://127.0.0.1:17373" />
+          </label>
+          <label class="row">
+            <span>评分模式</span>
+            <select id="llm-mode">
+              <option value="hosted">托管（公共 Key）</option>
+              <option value="byok">高级 BYOK（自备 Key）</option>
+            </select>
+          </label>
+          <div class="actions">
+            <button id="pay-save-mode" type="button">保存托管设置</button>
+          </div>
+          <pre id="pay-status" class="status" hidden></pre>
         </section>
       </main>
 
