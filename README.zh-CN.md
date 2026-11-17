@@ -323,7 +323,18 @@ PAY_MODE=1 CLOUD_BASE_URL=https://your-pay-host.example npm run build:pay
 - 扩展通过 `@jseeker/premium/*` 引入（构建期映射到 `premium/extension` 或社区 stub）
 - 可用 git submodule：私有仓库托管 `premium`，主仓 `git submodule add <url> premium`
 
-详见 [premium/README.md](premium/README.md)。
+详见 [premium/README.md]
+
+### 带 premium 子模块克隆
+
+```bash
+git clone --recurse-submodules git@github.com:no7dw/rightjob-automation.git
+# 已有仓库：
+git submodule update --init --recursive
+```
+
+Premium 仓库：https://github.com/no7dw/rightjob-automation-premium
+(premium/README.md)。
 
 ### 本地 pay 联调
 

@@ -327,7 +327,18 @@ Monetization / hosted-key code lives in **`premium/`** (not required for communi
 - Extension imports `@jseeker/premium/*` (esbuild aliases to `premium/extension` or `extension/community-stubs`)
 - Optional git submodule: keep `premium` in a private repo and `git submodule add <url> premium`
 
-See [premium/README.md](premium/README.md).
+See [premium/README.md]
+
+### Clone with premium submodule
+
+```bash
+git clone --recurse-submodules git@github.com:no7dw/rightjob-automation.git
+# existing checkout:
+git submodule update --init --recursive
+```
+
+Premium remote: https://github.com/no7dw/rightjob-automation-premium
+(premium/README.md).
 
 ### Local pay dry-run
 
