@@ -189,38 +189,92 @@ async function resolvedLlmMode() {
   return stored.llm_mode === "byok" ? "byok" : DEFAULT_LLM_MODE || "hosted";
 }
 
-async function payAccount() {
+const PAY_ACCOUNT_TTL_MS = 60_000;
+
+async function cachePayAccount(user, meta = {}) {
+  const fetched_at = Date.now();
+  await chrome.storage.local.set({
+    pay_user: user || null,
+    pay_account_meta: {
+      llm_configured: meta.llm_configured === true,
+      hosted_model: meta.hosted_model || "",
+    },
+    pay_account_fetched_at: fetched_at,
+  });
+  return fetched_at;
+}
+
+async function payAccount({ force = false } = {}) {
   if (!PAY_MODE) return null;
   const baseUrl = await resolvedCloudBaseUrl();
   const local = await chrome.storage.local.get([
     "pay_session_token",
     "pay_user",
+    "pay_account_meta",
+    "pay_account_fetched_at",
   ]);
   if (!local.pay_session_token) {
     return {
       logged_in: false,
       base_url: baseUrl,
       user: null,
+      cached: false,
+      fetched_at: 0,
+    };
+  }
+  const fetchedAt = Number(local.pay_account_fetched_at) || 0;
+  const age = Date.now() - fetchedAt;
+  const cacheFresh =
+    !force &&
+    local.pay_user &&
+    fetchedAt > 0 &&
+    age >= 0 &&
+    age < PAY_ACCOUNT_TTL_MS;
+  if (cacheFresh) {
+    return {
+      logged_in: true,
+      base_url: baseUrl,
+      user: local.pay_user,
+      llm_configured: local.pay_account_meta?.llm_configured !== false,
+      hosted_model: local.pay_account_meta?.hosted_model || "",
+      cached: true,
+      fetched_at: fetchedAt,
+      stale_in_ms: Math.max(0, PAY_ACCOUNT_TTL_MS - age),
     };
   }
   try {
-    const response = await cloudRequest(baseUrl, "/me", {}, AbortSignal.timeout(8000));
+    const response = await cloudRequest(
+      baseUrl,
+      "/me",
+      {},
+      AbortSignal.timeout(8000),
+    );
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-    await chrome.storage.local.set({ pay_user: data.user || null });
+    const fetched_at = await cachePayAccount(data.user || null, {
+      llm_configured: data.llm_configured === true,
+      hosted_model: data.hosted_model || "",
+    });
     return {
       logged_in: true,
       base_url: baseUrl,
       user: data.user || null,
       llm_configured: data.llm_configured === true,
       hosted_model: data.hosted_model || "",
+      cached: false,
+      fetched_at,
+      stale_in_ms: PAY_ACCOUNT_TTL_MS,
     };
   } catch (error) {
     return {
       logged_in: !!local.pay_session_token,
       base_url: baseUrl,
       user: local.pay_user || null,
+      llm_configured: local.pay_account_meta?.llm_configured !== false,
+      hosted_model: local.pay_account_meta?.hosted_model || "",
       error: error.message,
+      cached: true,
+      fetched_at: fetchedAt,
     };
   }
 }
@@ -409,8 +463,13 @@ async function reportContactUsage(jobId, meta = {}) {
       });
       return null;
     }
-    if (data.user)
-      await chrome.storage.local.set({ pay_user: data.user });
+    if (data.user) {
+      await cachePayAccount(data.user, {
+        llm_configured: true,
+        hosted_model: (await chrome.storage.local.get("pay_account_meta"))
+          .pay_account_meta?.hosted_model || "",
+      });
+    }
     return data;
   } catch (error) {
     logEvent("pay:usage_error", { job_id: jobId, error: error.message });
@@ -1219,7 +1278,9 @@ async function handle(message, sender) {
           mode,
           cloud_base_url:
             normalizeCloudBaseUrl(config.cloud_base_url) || CLOUD_BASE_URL,
-          pay: PAY_MODE ? await payAccount() : null,
+          pay: PAY_MODE
+            ? await payAccount({ force: message.refresh_pay === true })
+            : null,
           model: config.llm_model || "",
           reasoning_effort: config.llm_reasoning_effort || "auto",
           base_url: config.llm_base_url || "",
@@ -1951,10 +2012,10 @@ async function handle(message, sender) {
       await chrome.storage.local.set({
         cloud_base_url: baseUrl,
         pay_session_token: data.session_token,
-        pay_user: data.user || null,
         llm_mode: "hosted",
       });
-      return { user: data.user, pay: await payAccount() };
+      await cachePayAccount(data.user || null, { llm_configured: true });
+      return { user: data.user, pay: await payAccount({ force: true }) };
     }
     case "PAY_LOGOUT": {
       if (!own) throw new Error("仅限设置页");
@@ -1968,7 +2029,12 @@ async function handle(message, sender) {
           /* ignore */
         }
       }
-      await chrome.storage.local.remove(["pay_session_token", "pay_user"]);
+      await chrome.storage.local.remove([
+        "pay_session_token",
+        "pay_user",
+        "pay_account_meta",
+        "pay_account_fetched_at",
+      ]);
       return true;
     }
     case "PAY_SET_MODE": {
@@ -1982,7 +2048,7 @@ async function handle(message, sender) {
         });
       return {
         mode,
-        pay: await payAccount(),
+        pay: await payAccount({ force: message.refresh_pay === true }),
         status: await safeLLMStatus(
           message.model,
           message.base_url,
@@ -1996,7 +2062,19 @@ async function handle(message, sender) {
         pay_mode: PAY_MODE,
         mode: await resolvedLlmMode(),
         cloud_base_url: await resolvedCloudBaseUrl(),
-        pay: PAY_MODE ? await payAccount() : null,
+        pay: PAY_MODE
+          ? await payAccount({ force: message.refresh_pay === true })
+          : null,
+      };
+    }
+    case "PAY_REFRESH": {
+      if (!own) throw new Error("仅限设置页");
+      if (!PAY_MODE) throw new Error("当前构建未启用托管登录");
+      return {
+        pay_mode: true,
+        mode: await resolvedLlmMode(),
+        cloud_base_url: await resolvedCloudBaseUrl(),
+        pay: await payAccount({ force: true }),
       };
     }
     case "PAY_REPORT_CONTACT": {

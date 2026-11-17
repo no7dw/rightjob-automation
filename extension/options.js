@@ -282,6 +282,10 @@ function renderPay(config) {
   const user = pay.user || null;
   $("#cloud-base").value = config.cloud_base_url || pay.base_url || "";
   $("#llm-mode").value = config.mode === "byok" ? "byok" : "hosted";
+  const ageSec =
+    pay.fetched_at > 0
+      ? Math.max(0, Math.round((Date.now() - pay.fetched_at) / 1000))
+      : null;
   const lines = [
     `MODE     ${config.mode || "hosted"}`,
     `LOGIN    ${pay.logged_in ? "已登录" : "未登录"}`,
@@ -289,6 +293,13 @@ function renderPay(config) {
     `QUOTA    ${user ? `${user.quota_remaining}/${user.quota_total}` : "-"}`,
     `ENABLED  ${user ? (user.enabled ? "yes" : "no") : "-"}`,
     `PLAN     ${user?.plan || "-"}`,
+    `SYNC     ${
+      ageSec == null
+        ? "-"
+        : pay.cached
+          ? `缓存 ${ageSec}s 前（≤60s 自动过期）`
+          : `刚刚同步`
+    }`,
   ];
   if (pay.error) lines.push(`提示     ${pay.error}`);
   $("#pay-status").textContent = lines.join("\n");
@@ -322,9 +333,12 @@ function applyConfiguration(config) {
   renderLLM(config.status, config.api_key_override);
 }
 
-async function refresh() {
+async function refresh({ refreshPay = false } = {}) {
   const state = await api({ type: "GET_STATE" });
-  const config = await api({ type: "GET_LLM_CONFIG" });
+  const config = await api({
+    type: "GET_LLM_CONFIG",
+    refresh_pay: refreshPay === true,
+  });
   $("#cv").value = state.profile?.text || "";
   $("#blacklist").value = (state.prefs?.excluded_terms || []).join(",");
   $("#blacklist").disabled = false;
@@ -455,10 +469,39 @@ $("#pay-logout")?.addEventListener(
 $("#pay-refresh")?.addEventListener(
   "click",
   action(async () => {
-    await refresh();
-    return "额度已刷新";
+    const result = await api({ type: "PAY_REFRESH" });
+    currentConfig = {
+      ...currentConfig,
+      pay_mode: true,
+      mode: result.mode,
+      cloud_base_url: result.cloud_base_url,
+      pay: result.pay,
+      status: currentConfig.status,
+    };
+    renderPay(currentConfig);
+    return "额度已从服务器同步";
   }),
 );
+
+// Settings page: force sync once on open, then at most every 60s while open.
+let paySyncTimer = 0;
+async function syncPayIfVisible() {
+  const section = $("#pay-section");
+  if (!section || section.hidden) return;
+  try {
+    const result = await api({ type: "PAY_REFRESH" });
+    currentConfig = {
+      ...currentConfig,
+      pay_mode: true,
+      mode: result.mode || currentConfig.mode,
+      cloud_base_url: result.cloud_base_url || currentConfig.cloud_base_url,
+      pay: result.pay,
+    };
+    renderPay(currentConfig);
+  } catch {
+    /* ignore background polling errors */
+  }
+}
 
 $("#pay-save-mode")?.addEventListener(
   "click",
@@ -478,8 +521,10 @@ $("#pay-save-mode")?.addEventListener(
 
 try {
   await loadCatalog();
-  await refresh();
+  await refresh({ refreshPay: true });
   $("#token").value = (await api({ type: "GET_SESSION" })).helper_token || "";
+  paySyncTimer = window.setInterval(syncPayIfVisible, 60_000);
+  window.addEventListener("beforeunload", () => clearInterval(paySyncTimer));
 } catch (error) {
   $("#message").textContent = error.message;
 }
