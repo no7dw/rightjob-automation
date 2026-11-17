@@ -24,8 +24,9 @@
     "test:scope": "python3 scripts/scope_change_browser_test.py",
     "test:speed": "node scripts/benchmark-model-latency.mjs",
     "build:pay": "PAY_MODE=1 node scripts/build.mjs --pay",
-    "helper:pay": "PAY_MODE=1 PAY_MAIL_STUB=1 node helper/server.mjs --project-env",
-    "test:pay": "node --test tests/pay-store.test.mjs tests/cloud-client.test.mjs tests/pay-server.test.mjs"
+    "helper:pay": "node --input-type=module -e \"process.env.PAY_MODE='1'; process.env.PAY_MAIL_STUB=process.env.PAY_MAIL_STUB||'1'; const port=process.env.JSEEKER_PORT||'17373'; process.env.APP_PUBLIC_URL=process.env.APP_PUBLIC_URL||('http://127.0.0.1:'+port); process.env.JSEEKER_HOST=process.env.JSEEKER_HOST||'127.0.0.1'; process.env.PAY_DB_PATH=process.env.PAY_DB_PATH||'./data/pay-store.json'; process.argv.push('--project-env'); await import('./helper/server.mjs');\"",
+    "test:pay": "node --test tests/pay-store.test.mjs tests/cloud-client.test.mjs tests/pay-server.test.mjs",
+    "build:pay:local": "node --input-type=module -e \"process.env.PAY_MODE='1'; if(!process.env.CLOUD_BASE_URL) process.env.CLOUD_BASE_URL='http://127.0.0.1:'+(process.env.JSEEKER_PORT||'17373'); process.argv.push('--pay'); await import('./scripts/build.mjs');\""
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

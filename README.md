@@ -317,6 +317,31 @@ npm run helper:pay   # local stub mail: set PAY_MAIL_STUB=1
 PAY_MODE=1 CLOUD_BASE_URL=https://your-pay-host.example npm run build:pay
 ```
 
+
+### Local pay dry-run
+
+```bash
+# terminal 1 — pay Helper on loopback (mail stub, no Resend needed)
+./restart.sh pay
+
+# terminal 2 — extension pointed at local Helper
+npm run build:pay:local
+# Load/reload dist/ in Chrome/Brave
+
+# Settings → 账号:
+#   云端地址: http://127.0.0.1:17373
+#   邮箱: any@example.com → 发送登录邮件
+# Server response/log includes login_url; open it, copy exchange code → 完成登录
+
+# Admin (password default local-admin unless ADMIN_PASSWORD set):
+open http://127.0.0.1:17373/admin
+
+# Unit checks
+npm run test:pay
+```
+
+`./restart.sh` without args stays normal BYOK Helper.
+
 Load `dist/`. Settings → account: request email link, paste exchange code, see remaining quota. Default mode is hosted; Advanced BYOK remains available.
 
 Keep pay-only changes on `prod-pay`. Periodically merge `main` → `prod-pay`; do not merge pay features back into `main`.

@@ -313,6 +313,30 @@ npm run helper:pay   # 本地可用 PAY_MAIL_STUB=1 跳过真发信
 PAY_MODE=1 CLOUD_BASE_URL=https://your-pay-host.example npm run build:pay
 ```
 
+
+### 本地 pay 联调
+
+```bash
+# 终端 1 — 本机托管 Helper（邮件 stub，不需要 Resend）
+./restart.sh pay
+
+# 终端 2 — 扩展指向本机
+npm run build:pay:local
+# 浏览器加载/重载 dist/
+
+# 设置页 → 账号:
+#   云端地址: http://127.0.0.1:17373
+#   邮箱任意 → 发送登录邮件
+# 服务端返回/日志里有 login_url；浏览器打开后复制兑换码 → 完成登录
+
+# Admin（默认密码 local-admin，可用 ADMIN_PASSWORD 覆盖）:
+open http://127.0.0.1:17373/admin
+
+npm run test:pay
+```
+
+`./restart.sh` 无参数仍是普通 BYOK Helper。
+
 加载 `dist/`。设置页登录邮箱、粘贴兑换码、查看额度。默认托管；高级仍可 BYOK。
 
 付费相关改动只留在 `prod-pay`；定期 `main → prod-pay` 同步，不要把 pay 合回 `main`。
