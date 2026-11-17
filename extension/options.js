@@ -6,6 +6,7 @@ import {
   providerModels,
 } from "./llm-catalog.js";
 import { parseBlacklist } from "./blacklist.js";
+import { createPaySettings, isPayEdition } from "./options-pay.js";
 
 const $ = (selector) => document.querySelector(selector);
 const api = async (message) => {
@@ -30,6 +31,20 @@ let compatibleProviders = [];
 let currentConfig = {};
 let blacklistSaveTimer;
 let blacklistSavePromise = Promise.resolve();
+
+const pay = createPaySettings({
+  api,
+  action,
+  $,
+  getModelContext: () => ({
+    model: modelValue(),
+    base_url: $("#api-base")?.value || "",
+    api_key: $("#api-key")?.value.trim() || "",
+  }),
+  setMessage: (text) => {
+    if ($("#message")) $("#message").textContent = text;
+  },
+});
 
 const blacklistConfig = (kind) =>
   kind === "company"
@@ -98,90 +113,48 @@ async function saveBlacklist(kind, overrideTerms = null) {
   try {
     const result = await pending;
     const saved = terms(result?.prefs || {});
-    if (input.value === draft) {
+    if (input.value === draft || overrideTerms) {
       input.value = saved.join(",");
       renderBlacklistTags(kind, saved);
       status.textContent = "已保存";
     }
+    return result;
   } catch (error) {
     status.textContent = `保存失败：${error.message}`;
+    throw error;
   } finally {
     setBlacklistRemoveDisabled(kind, false);
   }
 }
 
-async function removeBlacklist(kind, term) {
-  const { input, status, parse } = blacklistConfig(kind);
-  const saved = parse(input.value).filter(
-    (item) => item.toLowerCase() !== term.toLowerCase(),
-  );
+function scheduleBlacklistSave(kind) {
+  const { status } = blacklistConfig(kind);
   status.textContent = "保存中…";
-  await saveBlacklist(kind, saved);
+  clearTimeout(blacklistSaveTimer);
+  blacklistSaveTimer = setTimeout(() => {
+    saveBlacklist(kind).catch(() => {});
+  }, 400);
 }
 
-const titleScreenBox = $("#title-screen");
-const titleScreenStatus = $("#title-screen-status");
-const renderTitleScreen = (enabled) => {
-  titleScreenBox.checked = enabled;
-  titleScreenBox.disabled = false;
-  titleScreenStatus.textContent = enabled
-    ? "已开启：标题不符的卡片会被跳过"
-    : "已关闭：所有卡片直接采集评分";
-};
-chrome.storage.local
-  .get("title_screen_enabled")
-  .then(({ title_screen_enabled = false }) => renderTitleScreen(!!title_screen_enabled))
-  .catch(() => {
-    titleScreenStatus.textContent = "读取失败，可重新打开设置页";
-  });
-titleScreenBox.onchange = action(async () => {
-  const enabled = await api({
-    type: "SET_TITLE_SCREEN",
-    enabled: titleScreenBox.checked,
-  });
-  renderTitleScreen(enabled);
-  return enabled ? "标题预筛已开启" : "标题预筛已关闭";
-});
-
-$("#blacklist").oninput = () => {
-  $("#blacklist-status").textContent = "保存中…";
-  clearTimeout(blacklistSaveTimer);
-  renderBlacklistTags("jd", parseBlacklist($("#blacklist").value));
-  blacklistSaveTimer = setTimeout(() => saveBlacklist("jd"), 350);
-};
-$("#blacklist").onchange = () => saveBlacklist("jd");
-$("#blacklist-tags").onclick = (event) => {
-  const button = event.target.closest(".tag-remove");
-  if (button) removeBlacklist("jd", button.dataset.term);
-};
-$("#company-blacklist").oninput = () => {
-  $("#company-blacklist-status").textContent = "保存中…";
-  clearTimeout(blacklistSaveTimer);
-  renderBlacklistTags(
-    "company",
-    parseBlacklist($("#company-blacklist").value),
-  );
-  blacklistSaveTimer = setTimeout(() => saveBlacklist("company"), 350);
-};
-$("#company-blacklist").onchange = () => saveBlacklist("company");
-$("#company-blacklist-tags").onclick = (event) => {
-  const button = event.target.closest(".tag-remove");
-  if (button) removeBlacklist("company", button.dataset.term);
-};
-
-function addOption(select, value, label) {
-  const option = document.createElement("option");
-  option.value = value;
-  option.textContent = label;
-  select.append(option);
+function modelValue() {
+  const custom = $("#model-custom");
+  if (custom && custom.style.display !== "none") return custom.value.trim();
+  return ($("#model")?.value || "").trim();
 }
 
 function populateProviders() {
   const select = $("#provider");
   select.replaceChildren();
-  addOption(select, "", "Custom");
-  for (const provider of compatibleProviders)
-    addOption(select, provider.id, provider.name);
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = "选择 Provider";
+  select.append(empty);
+  for (const provider of compatibleProviders) {
+    const option = document.createElement("option");
+    option.value = provider.id;
+    option.textContent = provider.name;
+    select.append(option);
+  }
 }
 
 function populateModels({
@@ -189,68 +162,45 @@ function populateModels({
   preferredModel = "",
   fallbackBaseUrl = "",
 }) {
-  const provider =
-    selectedProvider || catalogProviderById(catalog, $("#provider").value);
-  const models = providerModels(provider);
-  const isCustom = !provider;
-  $("#model").style.display = isCustom ? "none" : "";
-  $("#model-custom").style.display = isCustom ? "" : "none";
-  $("#model-custom").value = isCustom ? preferredModel || "" : "";
   const select = $("#model");
+  const custom = $("#model-custom");
   select.replaceChildren();
-  const values = new Set();
+  const provider =
+    selectedProvider ||
+    catalogProviderById(catalog, $("#provider").value) ||
+    matchCatalogProvider(catalog, fallbackBaseUrl);
+  const models = providerModels(provider);
+  if (!models.length) {
+    select.style.display = "none";
+    custom.style.display = "";
+    if (preferredModel) custom.value = preferredModel;
+    return;
+  }
+  select.style.display = "";
+  custom.style.display = "none";
   for (const model of models) {
-    if (values.has(model.id)) continue;
-    values.add(model.id);
-    addOption(
-      select,
-      model.id,
-      model.name && model.name !== model.id
-        ? `${model.name} · ${model.id}`
-        : model.id,
-    );
-  }
-  if (preferredModel && !values.has(preferredModel)) {
     const option = document.createElement("option");
-    option.value = preferredModel;
-    option.textContent = `${preferredModel} · current`;
-    select.prepend(option);
-    values.add(preferredModel);
+    option.value = model;
+    option.textContent = model;
+    select.append(option);
   }
-  if (!values.size) {
-    addOption(select, "", "请选择 Provider 或配置 OPENAI_MODEL");
-  } else {
-    select.value = preferredModel || defaultProviderModel(provider);
-  }
-  // Catalog providers manage their own endpoint; Custom lets the user type one.
-  $("#api-base").readOnly = !!provider;
-  $("#api-base").value =
-    provider?.baseUrl ||
-    fallbackBaseUrl ||
-    currentConfig.status?.base_url ||
-    "";
+  const pick =
+    preferredModel && models.includes(preferredModel)
+      ? preferredModel
+      : defaultProviderModel(provider) || models[0];
+  select.value = pick;
 }
 
-const modelValue = () =>
-  ($("#model").style.display === "none"
-    ? $("#model-custom").value
-    : $("#model").value
-  ).trim();
-
 function renderLLM(status = {}, apiKeyOverride = false) {
-  const apiKey = $("#api-key");
-  if (document.activeElement !== apiKey) apiKey.value = "";
-  apiKey.placeholder = apiKeyOverride
-    ? "已保存自定义 Key；输入新 Key 可覆盖"
-    : status.api_key_configured
-      ? ".env Key 已配置；输入可覆盖"
-      : "输入 API Key，留空则使用 .env";
+  if (apiKeyOverride) $("#api-key").placeholder = "已保存覆盖 Key（留空保留）";
+  else $("#api-key").placeholder = "输入 API Key，留空则使用 .env";
   const lines = [
-    `SERVICE  ${status.error ? "未连接" : "已连接"}`,
+    `SERVICE  ${status.error && !status.configured ? "异常" : status.configured || status.ocr_ready ? "已连接" : "未连接"}`,
     `LLM      ${status.configured ? "已配置" : "未配置"}`,
     `OCR      ${status.ocr_ready ? "本地可用" : "本地未就绪"}`,
     `MODEL    ${status.model || "未设置"}`,
   ];
+  if (status.mode) lines.push(`MODE     ${status.mode}`);
   if (status.error) lines.push(`提示     ${status.error}`);
   $("#llm-status").textContent = lines.join("\n");
   $("#llm-status").classList.toggle("ok", !!status.configured);
@@ -271,52 +221,9 @@ async function loadCatalog() {
   populateProviders();
 }
 
-function renderPay(config) {
-  const paySection = $("#pay-section");
-  const byokSection = $("#byok-section");
-  if (!paySection) return;
-  const enabled = config?.pay_mode === true;
-  paySection.hidden = !enabled;
-  if (!enabled) return;
-  const pay = config.pay || {};
-  const user = pay.user || null;
-  $("#cloud-base").value = config.cloud_base_url || pay.base_url || "";
-  $("#llm-mode").value = config.mode === "byok" ? "byok" : "hosted";
-  const ageSec =
-    pay.fetched_at > 0
-      ? Math.max(0, Math.round((Date.now() - pay.fetched_at) / 1000))
-      : null;
-  const lines = [
-    `MODE     ${config.mode || "hosted"}`,
-    `LOGIN    ${pay.logged_in ? "已登录" : "未登录"}`,
-    `EMAIL    ${user?.email || "-"}`,
-    `QUOTA    ${user ? `${user.quota_remaining}/${user.quota_total}` : "-"}`,
-    `ENABLED  ${user ? (user.enabled ? "yes" : "no") : "-"}`,
-    `PLAN     ${user?.plan || "-"}`,
-    `SYNC     ${
-      ageSec == null
-        ? "-"
-        : pay.cached
-          ? `缓存 ${ageSec}s 前（≤60s 自动过期）`
-          : `刚刚同步`
-    }`,
-  ];
-  if (pay.error) lines.push(`提示     ${pay.error}`);
-  $("#pay-status").textContent = lines.join("\n");
-  $("#pay-status").classList.toggle("ok", !!pay.logged_in && user?.enabled !== false);
-  const hosted = (config.mode || "hosted") === "hosted";
-  if ($("#byok-hint")) {
-    $("#byok-hint").textContent = hosted
-      ? "当前为托管模式：默认使用云端公共 Key。如需自备 Key，请在上方切换到「高级 BYOK」。"
-      : "高级 BYOK：使用你自己的模型服务。Provider 与 Model 来自本地目录；API Key 可覆盖 .env。";
-  }
-  // Keep BYOK section visible as advanced always.
-  if (byokSection) byokSection.hidden = false;
-}
-
 function applyConfiguration(config) {
   currentConfig = config;
-  renderPay(config);
+  pay.apply(config);
   $("#reasoning-effort").value = config.reasoning_effort || "auto";
   const savedProvider = catalogProviderById(catalog, config.provider_id);
   const matched = matchCatalogProvider(
@@ -337,7 +244,7 @@ async function refresh({ refreshPay = false } = {}) {
   const state = await api({ type: "GET_STATE" });
   const config = await api({
     type: "GET_LLM_CONFIG",
-    refresh_pay: refreshPay === true,
+    refresh_pay: refreshPay === true && isPayEdition(),
   });
   $("#cv").value = state.profile?.text || "";
   $("#blacklist").value = (state.prefs?.excluded_terms || []).join(",");
@@ -352,8 +259,43 @@ async function refresh({ refreshPay = false } = {}) {
   $("#company-blacklist-status").textContent = "已保存";
   $("#profile-meta").textContent = state.profile?.is_example
     ? "示例简历（请在下方导入你的简历）"
-    : `${state.profile?.name || ""} · ${state.profile?.version ? `v${state.profile.version.slice(0, 12)}` : "未导入"}`;
+    : `${state.profile?.name || ""} · ${
+        state.profile?.version
+          ? `v${state.profile.version.slice(0, 12)}`
+          : "未导入"
+      }`;
   applyConfiguration(config);
+}
+
+function setupNav() {
+  const links = [...document.querySelectorAll("#settings-nav a[data-sec]")];
+  const sections = links
+    .map((link) => document.getElementById(link.dataset.sec))
+    .filter(Boolean);
+
+  function setActive(id) {
+    for (const link of links)
+      link.classList.toggle("active", link.dataset.sec === id);
+  }
+
+  for (const link of links) {
+    link.addEventListener("click", () => setActive(link.dataset.sec));
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible?.target?.id) setActive(visible.target.id);
+    },
+    {
+      rootMargin: "-20% 0px -55% 0px",
+      threshold: [0.15, 0.35, 0.6],
+    },
+  );
+  for (const section of sections) observer.observe(section);
+  if (links[0]) setActive(links[0].dataset.sec);
 }
 
 $("#provider").onchange = () => {
@@ -397,6 +339,7 @@ $("#save-llm").onclick = action(async () => {
     throw error;
   }
   currentConfig = {
+    ...currentConfig,
     provider_id: $("#provider").value,
     base_url: $("#api-base").value,
     model: modelValue(),
@@ -426,105 +369,53 @@ $("#save-token").onclick = action(async () => {
 });
 
 $("#refresh-status").onclick = action(async () => {
-  await refresh();
-  $("#message").textContent = "状态已刷新";
+  await refresh({ refreshPay: isPayEdition() });
+  return "状态已刷新";
 });
 
-$("#pay-request-link")?.addEventListener(
-  "click",
-  action(async () => {
-    const result = await api({
-      type: "PAY_REQUEST_LINK",
-      email: $("#pay-email").value.trim(),
-      base_url: $("#cloud-base").value.trim(),
-    });
-    await refresh();
-    return result.message || "登录邮件已发送";
-  }),
+$("#blacklist").addEventListener("input", () => scheduleBlacklistSave("jd"));
+$("#company-blacklist").addEventListener("input", () =>
+  scheduleBlacklistSave("company"),
 );
+document.addEventListener("click", (event) => {
+  const button = event.target.closest(".tag-remove");
+  if (!button) return;
+  const kind = button.dataset.kind === "company" ? "company" : "jd";
+  const { input, parse } = blacklistConfig(kind);
+  const next = parse(input.value).filter((term) => term !== button.dataset.term);
+  input.value = next.join(",");
+  saveBlacklist(kind, next).catch(() => {});
+});
 
-$("#pay-exchange")?.addEventListener(
-  "click",
-  action(async () => {
-    await api({
-      type: "PAY_EXCHANGE",
-      code: $("#pay-code").value.trim(),
-      base_url: $("#cloud-base").value.trim(),
-    });
-    $("#pay-code").value = "";
-    await refresh();
-    return "登录成功";
-  }),
-);
-
-$("#pay-logout")?.addEventListener(
-  "click",
-  action(async () => {
-    await api({ type: "PAY_LOGOUT" });
-    await refresh();
-    return "已退出登录";
-  }),
-);
-
-$("#pay-refresh")?.addEventListener(
-  "click",
-  action(async () => {
-    const result = await api({ type: "PAY_REFRESH" });
-    currentConfig = {
-      ...currentConfig,
-      pay_mode: true,
-      mode: result.mode,
-      cloud_base_url: result.cloud_base_url,
-      pay: result.pay,
-      status: currentConfig.status,
-    };
-    renderPay(currentConfig);
-    return "额度已从服务器同步";
-  }),
-);
-
-// Settings page: force sync once on open, then at most every 60s while open.
-let paySyncTimer = 0;
-async function syncPayIfVisible() {
-  const section = $("#pay-section");
-  if (!section || section.hidden) return;
-  try {
-    const result = await api({ type: "PAY_REFRESH" });
-    currentConfig = {
-      ...currentConfig,
-      pay_mode: true,
-      mode: result.mode || currentConfig.mode,
-      cloud_base_url: result.cloud_base_url || currentConfig.cloud_base_url,
-      pay: result.pay,
-    };
-    renderPay(currentConfig);
-  } catch {
-    /* ignore background polling errors */
-  }
+function renderTitleScreen(enabled) {
+  const box = $("#title-screen");
+  const status = $("#title-screen-status");
+  if (!box || !status) return;
+  box.checked = !!enabled;
+  box.disabled = false;
+  status.textContent = enabled ? "已开启" : "已关闭";
 }
 
-$("#pay-save-mode")?.addEventListener(
-  "click",
-  action(async () => {
-    await api({
-      type: "PAY_SET_MODE",
-      mode: $("#llm-mode").value,
-      cloud_base_url: $("#cloud-base").value.trim(),
-      model: modelValue(),
-      base_url: $("#api-base").value,
-      api_key: $("#api-key").value.trim(),
-    });
-    await refresh();
-    return "评分模式已保存";
-  }),
-);
+$("#title-screen").onchange = action(async () => {
+  const enabled = await api({
+    type: "SET_TITLE_SCREEN",
+    enabled: $("#title-screen").checked,
+  });
+  renderTitleScreen(enabled);
+  return "标题预筛已更新";
+});
+
+setupNav();
 
 try {
   await loadCatalog();
-  await refresh({ refreshPay: true });
+  await refresh({ refreshPay: false });
   $("#token").value = (await api({ type: "GET_SESSION" })).helper_token || "";
-  paySyncTimer = window.setInterval(syncPayIfVisible, 60_000);
-  window.addEventListener("beforeunload", () => clearInterval(paySyncTimer));
+  const { title_screen_enabled = false } = await chrome.storage.local.get(
+    "title_screen_enabled",
+  );
+  renderTitleScreen(!!title_screen_enabled);
+  if (pay.enabled) await pay.boot();
 } catch (error) {
   $("#message").textContent = error.message;
 }
