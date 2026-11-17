@@ -17,9 +17,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the architecture and for a step-by-st
 
 ## Screenshots
 
-**Offer talk walkthrough.** Short demo of the offer-talk flow end to end. ([MP4](assets/OFFER-TALIK-VIDEO.mp4))
+**Offer talk walkthrough.** Short demo of the offer-talk flow end to end.
 
-![Offer talk walkthrough](assets/OFFER-TALIK-VIDEO.gif)
+https://github.com/user-attachments/assets/2393cab5-9236-45ba-97ee-3d77d64203f1
+
 
 **Live match scores in the side panel.** Every card shows the LLM score; jobs below the threshold or blocked by a blacklist are marked. The panel controls the threshold, city selection, run size, and CSV export.
 
