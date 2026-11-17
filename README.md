@@ -17,6 +17,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the architecture and for a step-by-st
 
 ## Screenshots
 
+**Offer talk walkthrough.** Short demo of the offer-talk flow end to end.
+
+<video src="assets/OFFER-TALIK-VIDEO.mp4" width="720" autoplay muted loop playsinline controls preload="auto">
+  <a href="assets/OFFER-TALIK-VIDEO.mp4">Play offer talk walkthrough (MP4)</a>
+</video>
+
 **Live match scores in the side panel.** Every card shows the LLM score; jobs below the threshold or blocked by a blacklist are marked. The panel controls the threshold, city selection, run size, and CSV export.
 
 ![JSeeker match panel showing per-job scores on the BOSS job list](assets/seeker2.png)

@@ -17,6 +17,12 @@ Chrome / Brave Manifest V3 扩展：在 BOSS 直聘与猎聘的原生城市与�
 
 ## 界面截图
 
+**Offer 沟通演示。** 简短展示 offer talk 全流程。
+
+<video src="assets/OFFER-TALIK-VIDEO.mp4" width="720" autoplay muted loop playsinline controls preload="auto">
+  <a href="assets/OFFER-TALIK-VIDEO.mp4">播放 Offer 沟通演示（MP4）</a>
+</video>
+
 **侧栏实时匹配分。** 每张职位卡片显示 LLM 分数；低于阈值或命中黑名单的职位会被标记。侧栏可设置阈值、城市、运行数量并导出 CSV。
 
 ![JSeeker 在 BOSS 职位列表上显示每个职位的匹配分](assets/seeker2.png)
