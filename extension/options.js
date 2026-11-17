@@ -268,34 +268,71 @@ async function refresh({ refreshPay = false } = {}) {
 }
 
 function setupNav() {
-  const links = [...document.querySelectorAll("#settings-nav a[data-sec]")];
-  const sections = links
-    .map((link) => document.getElementById(link.dataset.sec))
-    .filter(Boolean);
+  const links = [...document.querySelectorAll("#settings-nav a[data-sec]")].filter(
+    (link) => link.offsetParent !== null || !link.classList.contains("pay-only"),
+  );
+  // Keep document order; ignore hidden premium links in community builds.
+  const items = links
+    .map((link) => ({
+      link,
+      id: link.dataset.sec,
+      section: document.getElementById(link.dataset.sec),
+    }))
+    .filter((item) => item.section && item.section.offsetParent !== null);
+
+  let activeId = "";
+  let clicking = false;
+  let clickTimer = 0;
 
   function setActive(id) {
-    for (const link of links)
-      link.classList.toggle("active", link.dataset.sec === id);
+    if (!id || id === activeId) return;
+    activeId = id;
+    for (const item of items)
+      item.link.classList.toggle("active", item.id === id);
   }
 
-  for (const link of links) {
-    link.addEventListener("click", () => setActive(link.dataset.sec));
+  function topOffset() {
+    const topbar = document.querySelector(".topbar");
+    return (topbar?.getBoundingClientRect().height || 56) + 20;
   }
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible?.target?.id) setActive(visible.target.id);
-    },
-    {
-      rootMargin: "-20% 0px -55% 0px",
-      threshold: [0.15, 0.35, 0.6],
-    },
-  );
-  for (const section of sections) observer.observe(section);
-  if (links[0]) setActive(links[0].dataset.sec);
+  // Activate the last section whose top has crossed the sticky header line.
+  // This stays monotonic with scroll direction and avoids IO flicker.
+  function syncFromScroll() {
+    if (clicking) return;
+    const line = topOffset();
+    let current = items[0]?.id || "";
+    for (const item of items) {
+      const top = item.section.getBoundingClientRect().top;
+      if (top - line <= 1) current = item.id;
+      else break;
+    }
+    // Near page bottom: force the last section so the final nav item can stick.
+    const scrollRoot = document.scrollingElement || document.documentElement;
+    const atBottom =
+      scrollRoot.scrollTop + window.innerHeight >= scrollRoot.scrollHeight - 8;
+    if (atBottom && items.length) current = items[items.length - 1].id;
+    setActive(current);
+  }
+
+  for (const item of items) {
+    item.link.addEventListener("click", (event) => {
+      event.preventDefault();
+      clicking = true;
+      clearTimeout(clickTimer);
+      setActive(item.id);
+      item.section.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", `#${item.id}`);
+      clickTimer = window.setTimeout(() => {
+        clicking = false;
+        syncFromScroll();
+      }, 450);
+    });
+  }
+
+  window.addEventListener("scroll", syncFromScroll, { passive: true });
+  window.addEventListener("resize", syncFromScroll);
+  syncFromScroll();
 }
 
 $("#provider").onchange = () => {
