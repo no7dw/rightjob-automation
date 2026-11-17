@@ -36,16 +36,7 @@ import {
 } from "./llm.js";
 import { contactRecord, indexScore, jobFingerprint } from "./job-history.js";
 import { createHelperClient } from "./helper-client.js";
-import {
-  cloudAuthRequest,
-  createCloudClient,
-  normalizeCloudBaseUrl,
-} from "./cloud-client.js";
-import {
-  CLOUD_BASE_URL,
-  DEFAULT_LLM_MODE,
-  PAY_MODE,
-} from "./pay-config.js";
+import { createBackgroundPay } from "@jseeker/premium/background-pay.js";
 import { bonusMessage, validateBonusMatches } from "./bonus-message.js";
 import { AUTO_REPLY_MESSAGES, autoReplyState } from "./auto-reply-state.js";
 import {
@@ -173,117 +164,6 @@ ready = initialize();
 
 let mutations = Promise.resolve();
 const helperRequest = createHelperClient(chrome.storage);
-const cloudRequest = createCloudClient(chrome.storage);
-
-async function resolvedCloudBaseUrl() {
-  const stored = await chrome.storage.local.get(["cloud_base_url"]);
-  return (
-    normalizeCloudBaseUrl(stored.cloud_base_url) ||
-    normalizeCloudBaseUrl(CLOUD_BASE_URL)
-  );
-}
-
-async function resolvedLlmMode() {
-  if (!PAY_MODE) return "byok";
-  const stored = await chrome.storage.local.get(["llm_mode"]);
-  return stored.llm_mode === "byok" ? "byok" : DEFAULT_LLM_MODE || "hosted";
-}
-
-const PAY_ACCOUNT_TTL_MS = 60_000;
-
-async function cachePayAccount(user, meta = {}) {
-  const fetched_at = Date.now();
-  await chrome.storage.local.set({
-    pay_user: user || null,
-    pay_account_meta: {
-      llm_configured: meta.llm_configured === true,
-      hosted_model: meta.hosted_model || "",
-    },
-    pay_account_fetched_at: fetched_at,
-  });
-  return fetched_at;
-}
-
-async function payAccount({ force = false } = {}) {
-  if (!PAY_MODE) return null;
-  const baseUrl = await resolvedCloudBaseUrl();
-  const local = await chrome.storage.local.get([
-    "pay_session_token",
-    "pay_user",
-    "pay_account_meta",
-    "pay_account_fetched_at",
-  ]);
-  if (!local.pay_session_token) {
-    return {
-      logged_in: false,
-      base_url: baseUrl,
-      user: null,
-      cached: false,
-      fetched_at: 0,
-    };
-  }
-  const fetchedAt = Number(local.pay_account_fetched_at) || 0;
-  const age = Date.now() - fetchedAt;
-  const cacheFresh =
-    !force &&
-    local.pay_user &&
-    fetchedAt > 0 &&
-    age >= 0 &&
-    age < PAY_ACCOUNT_TTL_MS;
-  if (cacheFresh) {
-    return {
-      logged_in: true,
-      base_url: baseUrl,
-      user: local.pay_user,
-      llm_configured: local.pay_account_meta?.llm_configured !== false,
-      hosted_model: local.pay_account_meta?.hosted_model || "",
-      cached: true,
-      fetched_at: fetchedAt,
-      stale_in_ms: Math.max(0, PAY_ACCOUNT_TTL_MS - age),
-    };
-  }
-  try {
-    const response = await cloudRequest(
-      baseUrl,
-      "/me",
-      {},
-      AbortSignal.timeout(8000),
-    );
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-    const fetched_at = await cachePayAccount(data.user || null, {
-      llm_configured: data.llm_configured === true,
-      hosted_model: data.hosted_model || "",
-    });
-    return {
-      logged_in: true,
-      base_url: baseUrl,
-      user: data.user || null,
-      llm_configured: data.llm_configured === true,
-      hosted_model: data.hosted_model || "",
-      cached: false,
-      fetched_at,
-      stale_in_ms: PAY_ACCOUNT_TTL_MS,
-    };
-  } catch (error) {
-    return {
-      logged_in: !!local.pay_session_token,
-      base_url: baseUrl,
-      user: local.pay_user || null,
-      llm_configured: local.pay_account_meta?.llm_configured !== false,
-      hosted_model: local.pay_account_meta?.hosted_model || "",
-      error: error.message,
-      cached: true,
-      fetched_at: fetchedAt,
-    };
-  }
-}
-
-function serial(fn) {
-  const next = mutations.then(fn);
-  mutations = next.catch(() => {});
-  return next;
-}
 
 async function localHelperRequest(path, body = {}, signal = null) {
   const { helper_port, timing_instance_id } = await chrome.storage.local.get(["helper_port", "timing_instance_id"]);
@@ -353,128 +233,20 @@ async function localHelperRequest(path, body = {}, signal = null) {
   return data;
 }
 
-async function cloudInferenceRequest(path, body = {}, signal = null) {
-  const baseUrl = await resolvedCloudBaseUrl();
-  if (!baseUrl) throw new Error("未配置云端服务地址（CLOUD_BASE_URL）");
-  const account = await payAccount();
-  if (!account.logged_in) throw new Error("请先在设置页登录邮箱账号");
-  if (account.user && account.user.enabled === false)
-    throw new Error("账号已停用，请联系管理员开通");
-  if (
-    ["/evaluate", "/screen", "/model"].includes(path) &&
-    account.user &&
-    (Number(account.user.quota_remaining) || 0) <= 0
-  )
-    throw new Error(
-      "试用额度已用尽。云端评分与自动沟通已暂停，请联系管理员开通或增加额度",
-    );
-  const started = Date.now();
-  const timing = {
-    ...body.timing,
-    request_id: crypto.randomUUID(),
-  };
-  const payload = {
-    ...body,
-    timing,
-    api_key: "",
-  };
-  const details = {
-    path,
-    transport: "cloud",
-    model: typeof payload.model === "string" ? payload.model : "",
-    job_id: typeof payload.job?.job_id === "string" ? payload.job.job_id : "",
-  };
-  logEvent("helper:start", { ...details, elapsed_s: 0 });
-  const heartbeat = setInterval(() => {
-    chrome.runtime.getPlatformInfo().catch(() => {});
-    logEvent("helper:waiting", {
-      ...details,
-      elapsed_ms: Date.now() - started,
-      elapsed_s: Math.round((Date.now() - started) / 100) / 10,
-    });
-  }, 10000);
-  let response;
-  try {
-    response = await cloudRequest(
-      baseUrl,
-      path,
-      payload,
-      signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(HELPER_TIMEOUT_MS)])
-        : AbortSignal.timeout(HELPER_TIMEOUT_MS),
-    );
-  } catch (error) {
-    clearInterval(heartbeat);
-    logEvent("helper:error", {
-      ...details,
-      elapsed_ms: Date.now() - started,
-      error: error.message,
-    });
-    if (error.name === "TimeoutError" || error.name === "AbortError")
-      throw new Error("云端服务请求超时，请稍后重试或检查网络。");
-    throw error;
-  }
-  clearInterval(heartbeat);
-  const data = await response.json().catch(() => ({}));
-  logEvent(response.ok ? "helper:done" : "helper:error", {
-    ...details,
-    elapsed_ms: Date.now() - started,
-    status: response.status,
-    error: response.ok ? undefined : data.error,
-  });
-  if (!response.ok)
-    throw Object.assign(
-      new Error(data.error || `云端服务 HTTP ${response.status}`),
-      { status: response.status },
-    );
-  return data;
-}
+const payBg = createBackgroundPay({
+  chrome,
+  helperRequest,
+  logEvent,
+  normalizeModelName,
+  localHelperRequest,
+});
 
 async function localRequest(path, body = {}, signal = null) {
-  // OCR/screenshots always prefer the optional local helper.
-  if (path === "/ocr") return localHelperRequest(path, body, signal);
-  const mode = await resolvedLlmMode();
-  if (PAY_MODE && mode === "hosted" && ["/evaluate", "/screen", "/model"].includes(path))
-    return cloudInferenceRequest(path, body, signal);
-  return localHelperRequest(path, body, signal);
+  return payBg.enhanceLocalRequest(path, body, signal, localHelperRequest);
 }
 
 async function reportContactUsage(jobId, meta = {}) {
-  if (!PAY_MODE) return null;
-  if ((await resolvedLlmMode()) !== "hosted") return null;
-  if (!jobId) return null;
-  const baseUrl = await resolvedCloudBaseUrl();
-  if (!baseUrl) return null;
-  const local = await chrome.storage.local.get(["pay_session_token"]);
-  if (!local.pay_session_token) return null;
-  try {
-    const response = await cloudRequest(
-      baseUrl,
-      "/usage/contact",
-      { job_id: jobId, ...meta },
-      AbortSignal.timeout(8000),
-    );
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      logEvent("pay:usage_error", {
-        job_id: jobId,
-        status: response.status,
-        error: data.error,
-      });
-      return null;
-    }
-    if (data.user) {
-      await cachePayAccount(data.user, {
-        llm_configured: true,
-        hosted_model: (await chrome.storage.local.get("pay_account_meta"))
-          .pay_account_meta?.hosted_model || "",
-      });
-    }
-    return data;
-  } catch (error) {
-    logEvent("pay:usage_error", { job_id: jobId, error: error.message });
-    return null;
-  }
+  return payBg.afterContactOpened(jobId, meta);
 }
 
 async function safeLLMStatus(
@@ -485,53 +257,14 @@ async function safeLLMStatus(
   reasoningEffort = "auto",
 ) {
   const requested = normalizeModelName(model);
-  if (PAY_MODE && (await resolvedLlmMode()) === "hosted") {
-    const account = await payAccount();
-    const hostedConfigured =
-      account.logged_in &&
-      account.user?.enabled !== false &&
-      (Number(account.user?.quota_remaining) || 0) > 0 &&
-      account.llm_configured !== false;
-    let verified = false;
-    let error = account.error || "";
-    if (!account.logged_in) error = error || "请先登录邮箱账号";
-    else if (account.user?.enabled === false) error = "账号已停用";
-    else if ((Number(account.user?.quota_remaining) || 0) <= 0)
-      error = "试用额度已用尽";
-    if (verify && hostedConfigured) {
-      try {
-        const result = await localRequest("/model", {
-          model: requested || account.hosted_model || "",
-          base_url: "",
-          api_key: "",
-          reasoning_effort: reasoningEffort,
-          verify: true,
-        });
-        verified = result.verified === true;
-        if (!verified) error = result.error || "托管模型验证失败";
-      } catch (err) {
-        error = err.message;
-      }
-    }
-    let ocr_ready = false;
-    try {
-      const health = await localHelperRequest("/health");
-      ocr_ready = health.ocr_ready === true;
-    } catch {
-      ocr_ready = false;
-    }
-    return {
-      configured: hostedConfigured && !error,
-      ocr_ready,
-      model: requested || account.hosted_model || "",
-      base_url: account.base_url || "",
-      version: "",
-      prompt_version: "",
-      verified: verify ? verified : undefined,
-      error: error || undefined,
-      pay: account,
-      mode: "hosted",
-    };
+  if (payBg.enabled) {
+    const hosted = await payBg.safeHostedStatus(
+      model,
+      reasoningEffort,
+      verify,
+      localRequest,
+    );
+    if (hosted) return hosted;
   }
   try {
     const health = await localHelperRequest("/health");
@@ -1268,18 +1001,19 @@ async function handle(message, sender) {
           "llm_mode",
           "cloud_base_url",
         ]);
-        const mode = PAY_MODE
+        const mode = payBg.enabled
           ? config.llm_mode === "byok"
             ? "byok"
             : "hosted"
           : "byok";
         return {
-          pay_mode: PAY_MODE,
+          pay_mode: payBg.enabled,
           mode,
-          cloud_base_url:
-            normalizeCloudBaseUrl(config.cloud_base_url) || CLOUD_BASE_URL,
-          pay: PAY_MODE
-            ? await payAccount({ force: message.refresh_pay === true })
+          cloud_base_url: config.cloud_base_url || payBg.CLOUD_BASE_URL || "",
+          pay: payBg.enabled
+            ? await payBg.getPayForConfig({
+                force: message.refresh_pay === true,
+              })
             : null,
           model: config.llm_model || "",
           reasoning_effort: config.llm_reasoning_effort || "auto",
@@ -1986,106 +1720,20 @@ async function handle(message, sender) {
         String(message.api_key || "").trim() || llm_api_key_override,
       );
     }
-    case "PAY_REQUEST_LINK": {
-      if (!own) throw new Error("仅限设置页");
-      if (!PAY_MODE) throw new Error("当前构建未启用托管登录");
-      const email = String(message.email || "").trim();
-      const baseUrl =
-        normalizeCloudBaseUrl(message.base_url) ||
-        (await resolvedCloudBaseUrl());
-      if (!baseUrl) throw new Error("未配置云端服务地址");
-      if (message.base_url)
-        await chrome.storage.local.set({
-          cloud_base_url: normalizeCloudBaseUrl(message.base_url),
+    default: {
+      if (
+        payBg.enabled &&
+        typeof message.type === "string" &&
+        message.type.startsWith("PAY_") &&
+        payBg.messageHandlers[message.type]
+      ) {
+        return payBg.messageHandlers[message.type](message, {
+          own,
+          safeLLMStatus,
         });
-      return cloudAuthRequest(baseUrl, "/auth/request-link", { email });
-    }
-    case "PAY_EXCHANGE": {
-      if (!own) throw new Error("仅限设置页");
-      if (!PAY_MODE) throw new Error("当前构建未启用托管登录");
-      const code = String(message.code || "").trim();
-      const baseUrl =
-        normalizeCloudBaseUrl(message.base_url) ||
-        (await resolvedCloudBaseUrl());
-      if (!baseUrl) throw new Error("未配置云端服务地址");
-      const data = await cloudAuthRequest(baseUrl, "/auth/session", { code });
-      await chrome.storage.local.set({
-        cloud_base_url: baseUrl,
-        pay_session_token: data.session_token,
-        llm_mode: "hosted",
-      });
-      await cachePayAccount(data.user || null, { llm_configured: true });
-      return { user: data.user, pay: await payAccount({ force: true }) };
-    }
-    case "PAY_LOGOUT": {
-      if (!own) throw new Error("仅限设置页");
-      if (!PAY_MODE) return true;
-      const baseUrl = await resolvedCloudBaseUrl();
-      const local = await chrome.storage.local.get(["pay_session_token"]);
-      if (baseUrl && local.pay_session_token) {
-        try {
-          await cloudRequest(baseUrl, "/auth/logout", {}, AbortSignal.timeout(5000));
-        } catch {
-          /* ignore */
-        }
       }
-      await chrome.storage.local.remove([
-        "pay_session_token",
-        "pay_user",
-        "pay_account_meta",
-        "pay_account_fetched_at",
-      ]);
-      return true;
-    }
-    case "PAY_SET_MODE": {
-      if (!own) throw new Error("仅限设置页");
-      if (!PAY_MODE) throw new Error("当前构建未启用托管模式");
-      const mode = message.mode === "byok" ? "byok" : "hosted";
-      await chrome.storage.local.set({ llm_mode: mode });
-      if (typeof message.cloud_base_url === "string" && message.cloud_base_url.trim())
-        await chrome.storage.local.set({
-          cloud_base_url: normalizeCloudBaseUrl(message.cloud_base_url),
-        });
-      return {
-        mode,
-        pay: await payAccount({ force: message.refresh_pay === true }),
-        status: await safeLLMStatus(
-          message.model,
-          message.base_url,
-          String(message.api_key || "").trim(),
-        ),
-      };
-    }
-    case "PAY_STATUS": {
-      if (!own) throw new Error("仅限设置页");
-      return {
-        pay_mode: PAY_MODE,
-        mode: await resolvedLlmMode(),
-        cloud_base_url: await resolvedCloudBaseUrl(),
-        pay: PAY_MODE
-          ? await payAccount({ force: message.refresh_pay === true })
-          : null,
-      };
-    }
-    case "PAY_REFRESH": {
-      if (!own) throw new Error("仅限设置页");
-      if (!PAY_MODE) throw new Error("当前构建未启用托管登录");
-      return {
-        pay_mode: true,
-        mode: await resolvedLlmMode(),
-        cloud_base_url: await resolvedCloudBaseUrl(),
-        pay: await payAccount({ force: true }),
-      };
-    }
-    case "PAY_REPORT_CONTACT": {
-      // Content/coordinator paths can report a confirmed first contact.
-      return reportContactUsage(message.job_id, {
-        run_id: message.run_id || "",
-        site: message.site || "",
-      });
-    }
-    default:
       throw new Error("不支持的操作");
+    }
   }
 }
 

@@ -18,9 +18,7 @@ import {
 } from "../extension/llm-catalog.js";
 import { loadLocalEnv } from "./local-env.mjs";
 import { createLangSmithTracing } from "./langsmith-tracing.mjs";
-import { createPayStore, isValidEmail, normalizeEmail } from "./pay-store.mjs";
-import { magicLinkEmailContent, sendResendEmail } from "./pay-mail.mjs";
-import { adminPageHtml, authCallbackHtml } from "./pay-admin-page.mjs";
+import { pathToFileURL } from "node:url";
 
 loadLocalEnv(new URL("../.env", import.meta.url), {
   preferFile: process.argv.includes("--project-env"),
@@ -40,17 +38,6 @@ const JD_LOG_PATH = resolve(
     fileURLToPath(new URL("../data/logs/jd-items.jsonl", import.meta.url)),
 );
 const PORT = Number(process.env.JSEEKER_PORT || 17373);
-const PAY_MODE =
-  process.env.PAY_MODE === "1" ||
-  process.env.PAY_MODE === "true" ||
-  process.env.JSEEKER_PAY_MODE === "1";
-const APP_PUBLIC_URL = (process.env.APP_PUBLIC_URL || "").replace(/\/+$/, "");
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-const RESEND_FROM = process.env.RESEND_FROM || "";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
-const APP_NAME = process.env.APP_NAME || "JSeeker";
-const payStore = PAY_MODE ? createPayStore() : null;
-const linkRate = new Map();
 const TIMING_LOG_PATH = resolve(process.env.JSEEKER_TIMING_LOG_PATH || `${dirname(JD_LOG_PATH)}/pipeline-timing.jsonl`);
 const writeTiming = timingWriter(TIMING_LOG_PATH);
 const OCR = fileURLToPath(new URL("./vision-ocr", import.meta.url));
@@ -74,6 +61,29 @@ const providerCatalog = JSON.parse(
 const DEFAULT_MODEL =
   configuredModel ||
   defaultProviderModel(matchCatalogProvider(providerCatalog, OPENAI_BASE_URL));
+
+async function loadPayRuntime() {
+  const wantPay =
+    process.env.PAY_MODE === "1" ||
+    process.env.PAY_MODE === "true" ||
+    process.env.JSEEKER_PAY_MODE === "1";
+  if (!wantPay) return null;
+  const registerUrl = new URL("../premium/helper/register.mjs", import.meta.url);
+  if (!existsSync(fileURLToPath(registerUrl))) {
+    throw new Error(
+      "PAY_MODE enabled but premium/ is missing. Init submodule: git submodule update --init --recursive",
+    );
+  }
+  const mod = await import(pathToFileURL(fileURLToPath(registerUrl)).href);
+  return mod.tryCreatePayRuntime({
+    env: process.env,
+    defaultModel: DEFAULT_MODEL,
+    openAiBaseUrl: OPENAI_BASE_URL,
+    openAiApiKey: OPENAI_API_KEY,
+  });
+}
+const pay = await loadPayRuntime();
+const PAY_MODE = !!pay;
 const configuredModelTimeout = Number(process.env.OPENAI_TIMEOUT_MS);
 const MODEL_TIMEOUT_MS =
   Number.isFinite(configuredModelTimeout) && configuredModelTimeout >= 1000
@@ -209,15 +219,13 @@ function authorized(req, expectedToken = TOKEN) {
   const expected = Buffer.from(expectedToken);
   return token.length === expected.length && timingSafeEqual(token, expected);
 }
+function communityOriginOK(origin) {
+  return !origin || /^chrome-extension:\/\/[a-p]{32}$/.test(origin);
+}
+
 function originOK(origin) {
-  if (!origin) return true;
-  if (/^chrome-extension:\/\/[a-p]{32}$/.test(origin)) return true;
-  if (!PAY_MODE || !APP_PUBLIC_URL) return false;
-  try {
-    return new URL(origin).origin === new URL(APP_PUBLIC_URL).origin;
-  } catch {
-    return false;
-  }
+  if (pay) return pay.originOK(origin, communityOriginOK);
+  return communityOriginOK(origin);
 }
 
 function requestPath(req) {
@@ -228,39 +236,18 @@ function requestPath(req) {
   }
 }
 
-function bearerToken(req) {
-  return String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
-}
-
 function localAuthorized(req) {
   return authorized(req, TOKEN);
 }
 
-function payUserFromReq(req) {
-  if (!PAY_MODE || !payStore) return null;
-  return payStore.sessionUser(req.headers.authorization);
-}
-
 function allowHostedInference(req, body = {}) {
-  if (!PAY_MODE) return { mode: "local" };
-  const hasClientKey =
-    typeof body.api_key === "string" && body.api_key.trim().length > 0;
-  if (hasClientKey && localAuthorized(req)) return { mode: "byok_local" };
-  if (hasClientKey) return { mode: "byok_session", user: payUserFromReq(req) };
-  const user = payUserFromReq(req);
-  return { mode: "hosted", user };
+  if (!pay) return { mode: "local" };
+  return pay.allowHostedInference(req, body, { localAuthorized });
 }
 
-function rateLimitLink(email) {
-  const key = normalizeEmail(email);
-  const now = Date.now();
-  const prev = linkRate.get(key) || 0;
-  if (now - prev < 30_000) {
-    const error = new Error("发送过于频繁，请稍后再试");
-    error.status = 429;
-    throw error;
-  }
-  linkRate.set(key, now);
+function decorateProviderError(message, accessMode) {
+  if (pay) return pay.decorateProviderError(message, accessMode);
+  return String(message || "");
 }
 
 function htmlRespond(res, code, html) {
@@ -362,140 +349,19 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(data));
   };
 
-  if (PAY_MODE && pathname === "/auth/callback" && req.method === "GET") {
-    try {
-      const url = new URL(req.url || "/", APP_PUBLIC_URL || "http://127.0.0.1");
-      const token = url.searchParams.get("token") || "";
-      const { code } = payStore.consumeMagicLink(token);
-      return htmlRespond(
-        res,
-        200,
-        authCallbackHtml({ appName: APP_NAME, code }),
-      );
-    } catch (error) {
-      return htmlRespond(
-        res,
-        400,
-        authCallbackHtml({
-          appName: APP_NAME,
-          error: error.message || "登录失败",
-        }),
-      );
-    }
-  }
-
-  if (PAY_MODE && pathname === "/admin" && req.method === "GET") {
-    return htmlRespond(res, 200, adminPageHtml());
-  }
-
-  if (PAY_MODE && pathname === "/auth/request-link" && req.method === "POST") {
-    try {
-      const body = await readBody(req);
-      const email = normalizeEmail(body.email);
-      if (!isValidEmail(email)) return respond(400, { error: "请输入有效邮箱" });
-      rateLimitLink(email);
-      if (!APP_PUBLIC_URL)
-        return respond(500, { error: "未配置 APP_PUBLIC_URL" });
-      const { token, user } = payStore.createMagicLink(email);
-      const loginUrl = `${APP_PUBLIC_URL}/auth/callback?token=${encodeURIComponent(token)}`;
-      const content = magicLinkEmailContent({
-        appName: APP_NAME,
-        loginUrl,
-        code: "",
-      });
-      if (process.env.PAY_MAIL_STUB === "1") {
-        console.log("[JSeeker][pay:mail-stub]", { email, loginUrl });
-      } else {
-        await sendResendEmail({
-          apiKey: RESEND_API_KEY,
-          from: RESEND_FROM,
-          to: email,
-          subject: content.subject,
-          html: content.html,
-          text: content.text,
-        });
-      }
-      return respond(200, {
-        ok: true,
-        email: user.email,
-        message: "登录邮件已发送，请查收并完成确认",
-        // Stub only: expose the link so local tests can finish without inbox access.
-        ...(process.env.PAY_MAIL_STUB === "1" ? { login_url: loginUrl } : {}),
-      });
-    } catch (error) {
-      const status =
-        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
-      return respond(status, { error: error.message });
-    }
-  }
-
-  if (PAY_MODE && pathname === "/auth/session" && req.method === "POST") {
-    try {
-      const body = await readBody(req);
-      const result = payStore.exchangeSession(String(body.code || "").trim());
-      return respond(200, result);
-    } catch (error) {
-      const status =
-        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
-      return respond(status, { error: error.message });
-    }
-  }
-
-  if (PAY_MODE && pathname === "/auth/logout" && req.method === "POST") {
-    payStore.revokeSession(req.headers.authorization);
-    return respond(200, { ok: true });
-  }
-
-  if (PAY_MODE && pathname === "/me") {
-    if (req.method !== "GET" && req.method !== "POST")
-      return respond(405, { error: "Method not allowed" });
-    const user = payUserFromReq(req);
-    if (!user) return respond(401, { error: "未登录" });
-    return respond(200, {
-      pay_mode: true,
-      user,
-      hosted_model: DEFAULT_MODEL,
-      hosted_base_url: OPENAI_BASE_URL,
-      llm_configured: !!(OPENAI_BASE_URL && (DEFAULT_MODEL || true) && OPENAI_API_KEY),
-    });
-  }
-
-  if (PAY_MODE && pathname.startsWith("/admin/api/") && req.method === "POST") {
-    const password = req.headers["x-admin-password"] || "";
-    if (!ADMIN_PASSWORD || !payStore.safeEqualSecret(password, ADMIN_PASSWORD))
-      return respond(401, { error: "Admin 密码错误" });
-    try {
-      const body = await readBody(req);
-      if (pathname === "/admin/api/list") {
-        return respond(200, {
-          users: payStore.listUsers(),
-          usage: payStore.recentUsage(50),
-        });
-      }
-      if (pathname === "/admin/api/upsert") {
-        const user = payStore.updateUser(body.email, body);
-        return respond(200, { user });
-      }
-      return respond(404, { error: "Unknown admin route" });
-    } catch (error) {
-      const status =
-        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
-      return respond(status, { error: error.message });
-    }
-  }
-
-  if (PAY_MODE && pathname === "/usage/contact" && req.method === "POST") {
-    try {
-      const user = payUserFromReq(req);
-      if (!user) return respond(401, { error: "未登录" });
-      const body = await readBody(req);
-      const result = payStore.consumeContact(user.id, body.job_id, body);
-      return respond(200, result);
-    } catch (error) {
-      const status =
-        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
-      return respond(status, { error: error.message });
-    }
+  if (
+    pay &&
+    (await pay.handlePublicRoute({
+      req,
+      res,
+      pathname,
+      method: req.method,
+      readBody,
+      respond,
+      htmlRespond,
+    }))
+  ) {
+    return;
   }
 
   if (pathname === "/pair") {
@@ -513,9 +379,10 @@ const server = http.createServer(async (req, res) => {
     return respond(200, { token: TOKEN });
   }
 
-  const payUser = payUserFromReq(req);
-  const isLocal = localAuthorized(req);
-  if (req.method !== "POST" || (!isLocal && !(PAY_MODE && payUser)))
+  const authz = pay
+    ? pay.authorizeRequest(req, { localAuthorized })
+    : { isLocal: localAuthorized(req), payUser: null, ok: localAuthorized(req) };
+  if (req.method !== "POST" || !authz.ok)
     return respond(401, { error: "Unauthorized" });
   if (pathname === "/timing") {
     try {
@@ -536,27 +403,8 @@ const server = http.createServer(async (req, res) => {
   try {
     const body = await readBody(req);
     const access = allowHostedInference(req, body);
-    if (
-      PAY_MODE &&
-      ["/evaluate", "/screen", "/model"].includes(pathname) &&
-      access.mode === "hosted"
-    ) {
-      payStore.assertHostedAccess(access.user);
-      // Hosted mode always uses server-side public key; ignore client key.
-      body.api_key = "";
-      if (!body.base_url) body.base_url = OPENAI_BASE_URL;
-      if (!body.model) body.model = DEFAULT_MODEL;
-    }
-    if (
-      PAY_MODE &&
-      access.mode === "byok_session" &&
-      access.user &&
-      access.user.enabled === false
-    ) {
-      const error = new Error("账号已停用");
-      error.status = 403;
-      throw error;
-    }
+    timing.access_mode = access.mode;
+    if (pay) pay.gateInference({ pathname, access, body });
     Object.assign(timing, Object.fromEntries(Object.entries(body.timing || {}).filter(([key]) =>
       ["request_id", "trace_id", "run_id", "task_id", "instance_id", "site", "job_id"].includes(key))));
     timing.site ||= body.job?.site || (String(body.titles?.[0]?.id || "").startsWith("liepin:") ? "liepin" : "boss");
@@ -975,7 +823,9 @@ const server = http.createServer(async (req, res) => {
     traceSpan?.error(error);
     console.warn("[JSeeker][request:error]", { request_id: timing.request_id, site: timing.site,
       job_id: timing.job_id, status, error: error.message });
-    respond(status, { error: error.message });
+    respond(status, {
+      error: decorateProviderError(error.message, timing.access_mode),
+    });
   } finally {
     traceSpan?.set("langsmith.metadata.retry_count", timing.retry_count || 0);
     traceSpan?.end();
@@ -987,12 +837,10 @@ const server = http.createServer(async (req, res) => {
 });
 server.requestTimeout = MODEL_TIMEOUT_MS + 5000;
 server.headersTimeout = 10000;
-const LISTEN_HOST = PAY_MODE
-  ? process.env.JSEEKER_HOST || "0.0.0.0"
-  : "127.0.0.1";
+const LISTEN_HOST = pay ? pay.listenHost : "127.0.0.1";
 server.listen(PORT, LISTEN_HOST, () => {
   const addr = server.address();
   console.log(
-    `JSeeker helper: http://${LISTEN_HOST === "0.0.0.0" ? "0.0.0.0" : "127.0.0.1"}:${addr.port}\nJD log: ${JD_LOG_PATH}\nAutomatic pairing ready (build and reload the extension; no manual Token needed).\nOCR: ${existsSync(OCR) ? "ready" : "run npm run helper:build"}; LLM base: ${OPENAI_BASE_URL ? "configured" : "not configured"}; Fallback model: ${DEFAULT_MODEL || "set in extension settings"} (extension may override)\nPAY_MODE: ${PAY_MODE ? "on" : "off"}${PAY_MODE && payStore ? `; pay db: ${payStore.path}` : ""}${PAY_MODE && APP_PUBLIC_URL ? `; public: ${APP_PUBLIC_URL}` : ""}`,
+    `JSeeker helper: http://${LISTEN_HOST === "0.0.0.0" ? "0.0.0.0" : "127.0.0.1"}:${addr.port}\nJD log: ${JD_LOG_PATH}\nAutomatic pairing ready (build and reload the extension; no manual Token needed).\nOCR: ${existsSync(OCR) ? "ready" : "run npm run helper:build"}; LLM base: ${OPENAI_BASE_URL ? "configured" : "not configured"}; Fallback model: ${DEFAULT_MODEL || "set in extension settings"} (extension may override)\n${pay ? pay.banner() : "PAY_MODE: off"}`,
   );
 });

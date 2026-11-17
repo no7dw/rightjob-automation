@@ -8,7 +8,8 @@ import {
   writeFile,
   chmod,
 } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { loadLocalToken } from "../helper/token-file.mjs";
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
@@ -62,8 +63,20 @@ const payMode =
   process.env.PAY_MODE === "true" ||
   process.argv.includes("--pay");
 const cloudBaseUrl = (process.env.CLOUD_BASE_URL || "").replace(/\/+$/, "");
+const premiumExt = resolve(
+  payMode && existsSync("premium/extension")
+    ? "premium/extension"
+    : "extension/community-stubs",
+);
+if (payMode && !existsSync("premium/extension")) {
+  throw new Error(
+    "PAY_MODE build requires premium/extension (git submodule update --init --recursive)",
+  );
+}
 const payDefine = {
-  "process.env.JSEEKER_PAY_MODE": JSON.stringify(payMode ? "1" : "0"),
+  "process.env.JSEEKER_PAY_MODE": JSON.stringify(
+    payMode && existsSync("premium/extension") ? "1" : "0",
+  ),
   "process.env.JSEEKER_CLOUD_BASE_URL": JSON.stringify(cloudBaseUrl),
 };
 
@@ -78,6 +91,9 @@ await build({
   format: "esm",
   target: "chrome116",
   define: payDefine,
+  alias: {
+    "@jseeker/premium": premiumExt,
+  },
 });
 for (const file of [
   "manifest.json",

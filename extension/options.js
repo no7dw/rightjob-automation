@@ -6,7 +6,7 @@ import {
   providerModels,
 } from "./llm-catalog.js";
 import { parseBlacklist } from "./blacklist.js";
-import { createPaySettings, isPayEdition } from "./options-pay.js";
+import { createPaySettings, isPayEdition } from "@jseeker/premium/options-pay.js";
 
 const $ = (selector) => document.querySelector(selector);
 const api = async (message) => {

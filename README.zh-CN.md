@@ -314,6 +314,17 @@ PAY_MODE=1 CLOUD_BASE_URL=https://your-pay-host.example npm run build:pay
 ```
 
 
+
+### Premium 目录
+
+收费 / 托管 Key 相关代码在 **`premium/`**（社区 `main` 可不包含）：
+
+- Helper 仅在 `PAY_MODE=1` 时加载 `premium/helper/register.mjs`
+- 扩展通过 `@jseeker/premium/*` 引入（构建期映射到 `premium/extension` 或社区 stub）
+- 可用 git submodule：私有仓库托管 `premium`，主仓 `git submodule add <url> premium`
+
+详见 [premium/README.md](premium/README.md)。
+
 ### 本地 pay 联调
 
 ```bash

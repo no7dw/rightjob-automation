@@ -318,6 +318,17 @@ PAY_MODE=1 CLOUD_BASE_URL=https://your-pay-host.example npm run build:pay
 ```
 
 
+
+### Premium package layout
+
+Monetization / hosted-key code lives in **`premium/`** (not required for community `main`):
+
+- Helper loads `premium/helper/register.mjs` only when `PAY_MODE=1`
+- Extension imports `@jseeker/premium/*` (esbuild aliases to `premium/extension` or `extension/community-stubs`)
+- Optional git submodule: keep `premium` in a private repo and `git submodule add <url> premium`
+
+See [premium/README.md](premium/README.md).
+
 ### Local pay dry-run
 
 ```bash
