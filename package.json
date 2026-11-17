@@ -22,7 +22,10 @@
     "test:bonus": "python3 scripts/boss_bonus_browser_test.py",
     "test:auto-reply": "python3 scripts/boss_auto_reply_browser_test.py",
     "test:scope": "python3 scripts/scope_change_browser_test.py",
-    "test:speed": "node scripts/benchmark-model-latency.mjs"
+    "test:speed": "node scripts/benchmark-model-latency.mjs",
+    "build:pay": "PAY_MODE=1 node scripts/build.mjs --pay",
+    "helper:pay": "PAY_MODE=1 PAY_MAIL_STUB=1 node helper/server.mjs --project-env",
+    "test:pay": "node --test tests/pay-store.test.mjs tests/cloud-client.test.mjs tests/pay-server.test.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

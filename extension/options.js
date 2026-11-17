@@ -271,8 +271,41 @@ async function loadCatalog() {
   populateProviders();
 }
 
+function renderPay(config) {
+  const paySection = $("#pay-section");
+  const byokSection = $("#byok-section");
+  if (!paySection) return;
+  const enabled = config?.pay_mode === true;
+  paySection.hidden = !enabled;
+  if (!enabled) return;
+  const pay = config.pay || {};
+  const user = pay.user || null;
+  $("#cloud-base").value = config.cloud_base_url || pay.base_url || "";
+  $("#llm-mode").value = config.mode === "byok" ? "byok" : "hosted";
+  const lines = [
+    `MODE     ${config.mode || "hosted"}`,
+    `LOGIN    ${pay.logged_in ? "已登录" : "未登录"}`,
+    `EMAIL    ${user?.email || "-"}`,
+    `QUOTA    ${user ? `${user.quota_remaining}/${user.quota_total}` : "-"}`,
+    `ENABLED  ${user ? (user.enabled ? "yes" : "no") : "-"}`,
+    `PLAN     ${user?.plan || "-"}`,
+  ];
+  if (pay.error) lines.push(`提示     ${pay.error}`);
+  $("#pay-status").textContent = lines.join("\n");
+  $("#pay-status").classList.toggle("ok", !!pay.logged_in && user?.enabled !== false);
+  const hosted = (config.mode || "hosted") === "hosted";
+  if ($("#byok-hint")) {
+    $("#byok-hint").textContent = hosted
+      ? "当前为托管模式：默认使用云端公共 Key。如需自备 Key，请在上方切换到「高级 BYOK」。"
+      : "高级 BYOK：使用你自己的模型服务。Provider 与 Model 来自本地目录；API Key 可覆盖 .env。";
+  }
+  // Keep BYOK section visible as advanced always.
+  if (byokSection) byokSection.hidden = false;
+}
+
 function applyConfiguration(config) {
   currentConfig = config;
+  renderPay(config);
   $("#reasoning-effort").value = config.reasoning_effort || "auto";
   const savedProvider = catalogProviderById(catalog, config.provider_id);
   const matched = matchCatalogProvider(
@@ -382,6 +415,66 @@ $("#refresh-status").onclick = action(async () => {
   await refresh();
   $("#message").textContent = "状态已刷新";
 });
+
+$("#pay-request-link")?.addEventListener(
+  "click",
+  action(async () => {
+    const result = await api({
+      type: "PAY_REQUEST_LINK",
+      email: $("#pay-email").value.trim(),
+      base_url: $("#cloud-base").value.trim(),
+    });
+    await refresh();
+    return result.message || "登录邮件已发送";
+  }),
+);
+
+$("#pay-exchange")?.addEventListener(
+  "click",
+  action(async () => {
+    await api({
+      type: "PAY_EXCHANGE",
+      code: $("#pay-code").value.trim(),
+      base_url: $("#cloud-base").value.trim(),
+    });
+    $("#pay-code").value = "";
+    await refresh();
+    return "登录成功";
+  }),
+);
+
+$("#pay-logout")?.addEventListener(
+  "click",
+  action(async () => {
+    await api({ type: "PAY_LOGOUT" });
+    await refresh();
+    return "已退出登录";
+  }),
+);
+
+$("#pay-refresh")?.addEventListener(
+  "click",
+  action(async () => {
+    await refresh();
+    return "额度已刷新";
+  }),
+);
+
+$("#pay-save-mode")?.addEventListener(
+  "click",
+  action(async () => {
+    await api({
+      type: "PAY_SET_MODE",
+      mode: $("#llm-mode").value,
+      cloud_base_url: $("#cloud-base").value.trim(),
+      model: modelValue(),
+      base_url: $("#api-base").value,
+      api_key: $("#api-key").value.trim(),
+    });
+    await refresh();
+    return "评分模式已保存";
+  }),
+);
 
 try {
   await loadCatalog();

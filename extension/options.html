@@ -209,9 +209,47 @@
           <button id="refresh-status" type="button">刷新状态</button>
         </div>
       </section>
-      <section>
-        <h2>模型（LLM）</h2>
+      <section id="pay-section" hidden>
+        <h2>账号（托管评分）</h2>
         <p class="hint">
+          邮箱登录后即可使用服务端公共模型 Key，无需自备 API Key。新用户默认 30 次成功沟通试用额度；
+          额度用尽后云端评分与自动沟通会暂停。本机 Helper 仍可选，用于 OCR。
+        </p>
+        <label>
+          <span>云端地址</span>
+          <input id="cloud-base" type="text" spellcheck="false" placeholder="https://pay.example.com" />
+        </label>
+        <label>
+          <span>邮箱</span>
+          <input id="pay-email" type="email" autocomplete="username" placeholder="you@example.com" />
+        </label>
+        <div class="actions">
+          <button id="pay-request-link" type="button">发送登录邮件</button>
+        </div>
+        <label>
+          <span>兑换码</span>
+          <textarea id="pay-code" rows="3" spellcheck="false" placeholder="从登录成功页复制兑换码"></textarea>
+        </label>
+        <div class="actions">
+          <button id="pay-exchange" type="button">完成登录</button>
+          <button id="pay-logout" type="button">退出登录</button>
+          <button id="pay-refresh" type="button">刷新额度</button>
+        </div>
+        <pre id="pay-status" class="status"></pre>
+        <label>
+          <span>评分模式</span>
+          <select id="llm-mode">
+            <option value="hosted">托管（默认，使用公共 Key）</option>
+            <option value="byok">高级 BYOK（自备 Key）</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button id="pay-save-mode" type="button">保存模式</button>
+        </div>
+      </section>
+      <section id="byok-section">
+        <h2>模型（LLM）</h2>
+        <p class="hint" id="byok-hint">
           使用你自己的模型服务（BYOK）。Provider 与 Model 来自本地目录并自动联动；API Key
           可在此覆盖项目根目录 <code>.env</code> 中的值。Key 只保存在本机扩展存储并发送给本地服务，不会回显或进入导出。
         </p>

@@ -737,6 +737,18 @@ export class LiepinCoordinator {
           if (s.job_index?.[raw.job_id])
             s.job_index[raw.job_id].contacted = true;
         }
+        if (status === "contact_opened") {
+          try {
+            await this.browser.runtime.sendMessage({
+              type: "PAY_REPORT_CONTACT",
+              job_id: raw.job_id,
+              run_id: s.run.id,
+              site: "liepin",
+            });
+          } catch {
+            /* pay reporting is best-effort and must not block the batch */
+          }
+        }
         // The filled draft stays in its detail tab; the batch keeps going
         // without a manual checkpoint, mirroring the BOSS chat flow.
         s.run.status = "running";

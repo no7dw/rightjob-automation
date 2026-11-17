@@ -18,6 +18,9 @@ import {
 } from "../extension/llm-catalog.js";
 import { loadLocalEnv } from "./local-env.mjs";
 import { createLangSmithTracing } from "./langsmith-tracing.mjs";
+import { createPayStore, isValidEmail, normalizeEmail } from "./pay-store.mjs";
+import { magicLinkEmailContent, sendResendEmail } from "./pay-mail.mjs";
+import { adminPageHtml, authCallbackHtml } from "./pay-admin-page.mjs";
 
 loadLocalEnv(new URL("../.env", import.meta.url), {
   preferFile: process.argv.includes("--project-env"),
@@ -37,6 +40,17 @@ const JD_LOG_PATH = resolve(
     fileURLToPath(new URL("../data/logs/jd-items.jsonl", import.meta.url)),
 );
 const PORT = Number(process.env.JSEEKER_PORT || 17373);
+const PAY_MODE =
+  process.env.PAY_MODE === "1" ||
+  process.env.PAY_MODE === "true" ||
+  process.env.JSEEKER_PAY_MODE === "1";
+const APP_PUBLIC_URL = (process.env.APP_PUBLIC_URL || "").replace(/\/+$/, "");
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const RESEND_FROM = process.env.RESEND_FROM || "";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+const APP_NAME = process.env.APP_NAME || "JSeeker";
+const payStore = PAY_MODE ? createPayStore() : null;
+const linkRate = new Map();
 const TIMING_LOG_PATH = resolve(process.env.JSEEKER_TIMING_LOG_PATH || `${dirname(JD_LOG_PATH)}/pipeline-timing.jsonl`);
 const writeTiming = timingWriter(TIMING_LOG_PATH);
 const OCR = fileURLToPath(new URL("./vision-ocr", import.meta.url));
@@ -196,7 +210,65 @@ function authorized(req, expectedToken = TOKEN) {
   return token.length === expected.length && timingSafeEqual(token, expected);
 }
 function originOK(origin) {
-  return !origin || /^chrome-extension:\/\/[a-p]{32}$/.test(origin);
+  if (!origin) return true;
+  if (/^chrome-extension:\/\/[a-p]{32}$/.test(origin)) return true;
+  if (!PAY_MODE || !APP_PUBLIC_URL) return false;
+  try {
+    return new URL(origin).origin === new URL(APP_PUBLIC_URL).origin;
+  } catch {
+    return false;
+  }
+}
+
+function requestPath(req) {
+  try {
+    return new URL(req.url || "/", "http://127.0.0.1").pathname;
+  } catch {
+    return req.url || "/";
+  }
+}
+
+function bearerToken(req) {
+  return String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+}
+
+function localAuthorized(req) {
+  return authorized(req, TOKEN);
+}
+
+function payUserFromReq(req) {
+  if (!PAY_MODE || !payStore) return null;
+  return payStore.sessionUser(req.headers.authorization);
+}
+
+function allowHostedInference(req, body = {}) {
+  if (!PAY_MODE) return { mode: "local" };
+  const hasClientKey =
+    typeof body.api_key === "string" && body.api_key.trim().length > 0;
+  if (hasClientKey && localAuthorized(req)) return { mode: "byok_local" };
+  if (hasClientKey) return { mode: "byok_session", user: payUserFromReq(req) };
+  const user = payUserFromReq(req);
+  return { mode: "hosted", user };
+}
+
+function rateLimitLink(email) {
+  const key = normalizeEmail(email);
+  const now = Date.now();
+  const prev = linkRate.get(key) || 0;
+  if (now - prev < 30_000) {
+    const error = new Error("发送过于频繁，请稍后再试");
+    error.status = 429;
+    throw error;
+  }
+  linkRate.set(key, now);
+}
+
+function htmlRespond(res, code, html) {
+  res.writeHead(code, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  res.end(html);
 }
 async function readBody(req) {
   const chunks = [];
@@ -263,31 +335,174 @@ function runOCR(image) {
 let active = 0;
 const server = http.createServer(async (req, res) => {
   const origin = req.headers.origin;
-  if (!originOK(origin)) {
+  const pathname = requestPath(req);
+  // Browser navigation to auth/admin has no Origin; allow bare GET pages in pay mode.
+  const allowBareGet = PAY_MODE && !origin && req.method === "GET";
+  if (origin ? !originOK(origin) : !allowBareGet && !originOK(origin)) {
     res.writeHead(403);
     res.end();
     return;
   }
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Admin-Password",
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
     return;
   }
   const respond = (code, data) => {
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.writeHead(code);
     res.end(JSON.stringify(data));
   };
-  if (req.url === "/pair") {
+
+  if (PAY_MODE && pathname === "/auth/callback" && req.method === "GET") {
+    try {
+      const url = new URL(req.url || "/", APP_PUBLIC_URL || "http://127.0.0.1");
+      const token = url.searchParams.get("token") || "";
+      const { code } = payStore.consumeMagicLink(token);
+      return htmlRespond(
+        res,
+        200,
+        authCallbackHtml({ appName: APP_NAME, code }),
+      );
+    } catch (error) {
+      return htmlRespond(
+        res,
+        400,
+        authCallbackHtml({
+          appName: APP_NAME,
+          error: error.message || "登录失败",
+        }),
+      );
+    }
+  }
+
+  if (PAY_MODE && pathname === "/admin" && req.method === "GET") {
+    return htmlRespond(res, 200, adminPageHtml());
+  }
+
+  if (PAY_MODE && pathname === "/auth/request-link" && req.method === "POST") {
+    try {
+      const body = await readBody(req);
+      const email = normalizeEmail(body.email);
+      if (!isValidEmail(email)) return respond(400, { error: "请输入有效邮箱" });
+      rateLimitLink(email);
+      if (!APP_PUBLIC_URL)
+        return respond(500, { error: "未配置 APP_PUBLIC_URL" });
+      const { token, user } = payStore.createMagicLink(email);
+      const loginUrl = `${APP_PUBLIC_URL}/auth/callback?token=${encodeURIComponent(token)}`;
+      const content = magicLinkEmailContent({
+        appName: APP_NAME,
+        loginUrl,
+        code: "",
+      });
+      if (process.env.PAY_MAIL_STUB === "1") {
+        console.log("[JSeeker][pay:mail-stub]", { email, loginUrl });
+      } else {
+        await sendResendEmail({
+          apiKey: RESEND_API_KEY,
+          from: RESEND_FROM,
+          to: email,
+          subject: content.subject,
+          html: content.html,
+          text: content.text,
+        });
+      }
+      return respond(200, {
+        ok: true,
+        email: user.email,
+        message: "登录邮件已发送，请查收并完成确认",
+        // Stub only: expose the link so local tests can finish without inbox access.
+        ...(process.env.PAY_MAIL_STUB === "1" ? { login_url: loginUrl } : {}),
+      });
+    } catch (error) {
+      const status =
+        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
+      return respond(status, { error: error.message });
+    }
+  }
+
+  if (PAY_MODE && pathname === "/auth/session" && req.method === "POST") {
+    try {
+      const body = await readBody(req);
+      const result = payStore.exchangeSession(String(body.code || "").trim());
+      return respond(200, result);
+    } catch (error) {
+      const status =
+        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
+      return respond(status, { error: error.message });
+    }
+  }
+
+  if (PAY_MODE && pathname === "/auth/logout" && req.method === "POST") {
+    payStore.revokeSession(req.headers.authorization);
+    return respond(200, { ok: true });
+  }
+
+  if (PAY_MODE && pathname === "/me") {
+    if (req.method !== "GET" && req.method !== "POST")
+      return respond(405, { error: "Method not allowed" });
+    const user = payUserFromReq(req);
+    if (!user) return respond(401, { error: "未登录" });
+    return respond(200, {
+      pay_mode: true,
+      user,
+      hosted_model: DEFAULT_MODEL,
+      hosted_base_url: OPENAI_BASE_URL,
+      llm_configured: !!(OPENAI_BASE_URL && (DEFAULT_MODEL || true) && OPENAI_API_KEY),
+    });
+  }
+
+  if (PAY_MODE && pathname.startsWith("/admin/api/") && req.method === "POST") {
+    const password = req.headers["x-admin-password"] || "";
+    if (!ADMIN_PASSWORD || !payStore.safeEqualSecret(password, ADMIN_PASSWORD))
+      return respond(401, { error: "Admin 密码错误" });
+    try {
+      const body = await readBody(req);
+      if (pathname === "/admin/api/list") {
+        return respond(200, {
+          users: payStore.listUsers(),
+          usage: payStore.recentUsage(50),
+        });
+      }
+      if (pathname === "/admin/api/upsert") {
+        const user = payStore.updateUser(body.email, body);
+        return respond(200, { user });
+      }
+      return respond(404, { error: "Unknown admin route" });
+    } catch (error) {
+      const status =
+        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
+      return respond(status, { error: error.message });
+    }
+  }
+
+  if (PAY_MODE && pathname === "/usage/contact" && req.method === "POST") {
+    try {
+      const user = payUserFromReq(req);
+      if (!user) return respond(401, { error: "未登录" });
+      const body = await readBody(req);
+      const result = payStore.consumeContact(user.id, body.job_id, body);
+      return respond(200, result);
+    } catch (error) {
+      const status =
+        Number.isInteger(error.status) && error.status >= 400 ? error.status : 400;
+      return respond(status, { error: error.message });
+    }
+  }
+
+  if (pathname === "/pair") {
     const projectRoot = fileURLToPath(new URL("..", import.meta.url));
     if (
       req.method !== "POST" ||
-      req.headers.host !== `127.0.0.1:${server.address().port}` ||
+      !String(req.headers.host || "").startsWith("127.0.0.1:") ||
       !pairingOriginAllowed(origin, projectRoot) ||
       !authorized(req, PAIRING_KEY) ||
       req.headers["content-type"]?.split(";")[0].trim() !== "application/json"
@@ -297,9 +512,12 @@ const server = http.createServer(async (req, res) => {
       });
     return respond(200, { token: TOKEN });
   }
-  if (req.method !== "POST" || !authorized(req))
+
+  const payUser = payUserFromReq(req);
+  const isLocal = localAuthorized(req);
+  if (req.method !== "POST" || (!isLocal && !(PAY_MODE && payUser)))
     return respond(401, { error: "Unauthorized" });
-  if (req.url === "/timing") {
+  if (pathname === "/timing") {
     try {
       const body = await readBody(req);
       if (!Array.isArray(body.events) || body.events.length > 100)
@@ -308,22 +526,44 @@ const server = http.createServer(async (req, res) => {
       return respond(200, { ok: true });
     } catch { return respond(400, { error: "Invalid timing events" }); }
   }
-  let occupiesSlot = ["/evaluate", "/screen", "/ocr"].includes(req.url);
+  let occupiesSlot = ["/evaluate", "/screen", "/ocr"].includes(pathname);
   if (occupiesSlot && active >= 2) return respond(429, { error: "Helper busy" });
   if (occupiesSlot) active++;
   const timingStarted = performance.now();
-  const timing = { event: "timing:helper", phase: req.url.slice(1), path: req.url,
+  const timing = { event: "timing:helper", phase: pathname.slice(1), path: pathname,
     request_id: randomUUID(), started_at: new Date().toISOString(), status: 500 };
   let traceSpan = null;
   try {
     const body = await readBody(req);
+    const access = allowHostedInference(req, body);
+    if (
+      PAY_MODE &&
+      ["/evaluate", "/screen", "/model"].includes(pathname) &&
+      access.mode === "hosted"
+    ) {
+      payStore.assertHostedAccess(access.user);
+      // Hosted mode always uses server-side public key; ignore client key.
+      body.api_key = "";
+      if (!body.base_url) body.base_url = OPENAI_BASE_URL;
+      if (!body.model) body.model = DEFAULT_MODEL;
+    }
+    if (
+      PAY_MODE &&
+      access.mode === "byok_session" &&
+      access.user &&
+      access.user.enabled === false
+    ) {
+      const error = new Error("账号已停用");
+      error.status = 403;
+      throw error;
+    }
     Object.assign(timing, Object.fromEntries(Object.entries(body.timing || {}).filter(([key]) =>
       ["request_id", "trace_id", "run_id", "task_id", "instance_id", "site", "job_id"].includes(key))));
     timing.site ||= body.job?.site || (String(body.titles?.[0]?.id || "").startsWith("liepin:") ? "liepin" : "boss");
     timing.job_id ||= body.job?.job_id || body.titles?.[0]?.id || "";
     timing.model = body.model || DEFAULT_MODEL;
     timing.status = 200;
-    if (req.url === "/health")
+    if (pathname === "/health")
       return respond(200, {
         timing_version: 1,
         active_requests: active,
@@ -335,7 +575,7 @@ const server = http.createServer(async (req, res) => {
           api_key_configured: !!OPENAI_API_KEY,
         },
       });
-    if (req.url === "/model") {
+    if (pathname === "/model") {
       const model =
         typeof body.model === "string" && body.model.trim()
           ? body.model.trim()
@@ -384,7 +624,7 @@ const server = http.createServer(async (req, res) => {
       }
       return respond(200, result);
     }
-    if (req.url === "/screen") {
+    if (pathname === "/screen") {
       timing.title_count = Array.isArray(body.titles) ? body.titles.length : 0;
       // Title pre-screen: judge which list cards are worth a detail visit
       // before any tab is opened. Failures must fall back to open-all.
@@ -478,12 +718,12 @@ const server = http.createServer(async (req, res) => {
           .map((entry) => ({ id: String(entry.id), open: entry.open })),
       });
     }
-    if (req.url === "/ocr") {
+    if (pathname === "/ocr") {
       if (OCR_DELAY_MS)
         await new Promise((resolve) => setTimeout(resolve, OCR_DELAY_MS));
       return respond(200, await runOCR(body.image));
     }
-    if (req.url === "/evaluate") {
+    if (pathname === "/evaluate") {
       timing.prompt_version = PROMPT_VERSION;
       const evaluateStarted = Date.now();
       const model =
@@ -739,7 +979,7 @@ const server = http.createServer(async (req, res) => {
   } finally {
     traceSpan?.set("langsmith.metadata.retry_count", timing.retry_count || 0);
     traceSpan?.end();
-    if (["/screen", "/evaluate", "/model", "/ocr"].includes(req.url))
+    if (["/screen", "/evaluate", "/model", "/ocr"].includes(pathname))
       writeTiming([{ ...timing, status: res.statusCode || timing.status,
         ended_at: new Date().toISOString(), elapsed_ms: Math.round((performance.now() - timingStarted) * 100) / 100 }]);
     if (occupiesSlot) active--;
@@ -747,8 +987,12 @@ const server = http.createServer(async (req, res) => {
 });
 server.requestTimeout = MODEL_TIMEOUT_MS + 5000;
 server.headersTimeout = 10000;
-server.listen(PORT, "127.0.0.1", () => {
+const LISTEN_HOST = PAY_MODE
+  ? process.env.JSEEKER_HOST || "0.0.0.0"
+  : "127.0.0.1";
+server.listen(PORT, LISTEN_HOST, () => {
+  const addr = server.address();
   console.log(
-    `JSeeker helper: http://127.0.0.1:${server.address().port}\nJD log: ${JD_LOG_PATH}\nAutomatic pairing ready (build and reload the extension; no manual Token needed).\nOCR: ${existsSync(OCR) ? "ready" : "run npm run helper:build"}; LLM base: ${OPENAI_BASE_URL ? "configured" : "not configured"}; Fallback model: ${DEFAULT_MODEL || "set in extension settings"} (extension may override)`,
+    `JSeeker helper: http://${LISTEN_HOST === "0.0.0.0" ? "0.0.0.0" : "127.0.0.1"}:${addr.port}\nJD log: ${JD_LOG_PATH}\nAutomatic pairing ready (build and reload the extension; no manual Token needed).\nOCR: ${existsSync(OCR) ? "ready" : "run npm run helper:build"}; LLM base: ${OPENAI_BASE_URL ? "configured" : "not configured"}; Fallback model: ${DEFAULT_MODEL || "set in extension settings"} (extension may override)\nPAY_MODE: ${PAY_MODE ? "on" : "off"}${PAY_MODE && payStore ? `; pay db: ${payStore.path}` : ""}${PAY_MODE && APP_PUBLIC_URL ? `; public: ${APP_PUBLIC_URL}` : ""}`,
   );
 });

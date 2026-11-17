@@ -56,6 +56,17 @@ await build({
   loader: { ".css": "text" },
   sourcemap: false,
 });
+
+const payMode =
+  process.env.PAY_MODE === "1" ||
+  process.env.PAY_MODE === "true" ||
+  process.argv.includes("--pay");
+const cloudBaseUrl = (process.env.CLOUD_BASE_URL || "").replace(/\/+$/, "");
+const payDefine = {
+  "process.env.JSEEKER_PAY_MODE": JSON.stringify(payMode ? "1" : "0"),
+  "process.env.JSEEKER_CLOUD_BASE_URL": JSON.stringify(cloudBaseUrl),
+};
+
 await build({
   entryPoints: [
     "extension/background.js",
@@ -66,6 +77,7 @@ await build({
   outdir: "dist",
   format: "esm",
   target: "chrome116",
+  define: payDefine,
 });
 for (const file of [
   "manifest.json",
@@ -75,6 +87,27 @@ for (const file of [
   "llm-provider-catalog.json",
 ])
   await copyFile(`extension/${file}`, `dist/${file}`);
+if (payMode) {
+  const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
+  if (cloudBaseUrl) {
+    const origin = new URL(cloudBaseUrl).origin + "/*";
+    const hosts = new Set(manifest.host_permissions || []);
+    hosts.add(origin);
+    manifest.host_permissions = [...hosts];
+  }
+  manifest.name = "JSeeker · Job Match (Pay)";
+  manifest.description =
+    "托管评分版：邮箱登录即可使用，无需自备 API Key（高级仍支持 BYOK）。";
+  await writeFile(
+    "dist/manifest.json",
+    JSON.stringify(manifest, null, 2) + "\n",
+  );
+}
+console.log(
+  payMode
+    ? `Pay build enabled${cloudBaseUrl ? ` cloud=${cloudBaseUrl}` : ""}`
+    : "BYOK/local build",
+);
 // A real CV stays machine-local. Copy it only when it exists; never commit it.
 try {
   await copyFile("extension/profile.local.json", "dist/profile.local.json");

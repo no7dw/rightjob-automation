@@ -282,3 +282,41 @@ Fixture verification: `npm run build && npm run test:liepin`. It uses simulated 
 - [ ] Document and test each new adapter against a sanitized DOM fixture before a live run.
 
 Want to add one of these? Start with [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-new-job-site), which walks through the adapter contract and the exact files to change.
+
+## prod-pay hosted mode (branch `prod-pay`)
+
+`main` stays free BYOK. On branch `prod-pay` you can run a hosted scoring backend so users log in with email (Resend magic link) and do not need their own API key.
+
+### Server
+
+```bash
+# .env (server)
+PAY_MODE=1
+APP_PUBLIC_URL=https://your-pay-host.example
+RESEND_API_KEY=re_xxx
+RESEND_FROM=JSeeker <onboarding@resend.dev>
+ADMIN_PASSWORD=choose-a-strong-password
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=...
+OPENAI_MODEL=...
+PAY_DB_PATH=./data/pay-store.json
+JSEEKER_HOST=0.0.0.0
+JSEEKER_PORT=17373
+
+npm run helper:pay   # local stub mail: set PAY_MAIL_STUB=1
+```
+
+- Users: register/login via magic link → 30 successful-contact trial quota.
+- Quota unit: confirmed `contact_opened` (idempotent per job). At 0, hosted `/evaluate` and auto-contact stop.
+- Admin UI: `https://your-pay-host.example/admin` (password from `ADMIN_PASSWORD`).
+- Optional local Helper on the user machine still provides OCR.
+
+### Extension (pay build)
+
+```bash
+PAY_MODE=1 CLOUD_BASE_URL=https://your-pay-host.example npm run build:pay
+```
+
+Load `dist/`. Settings → account: request email link, paste exchange code, see remaining quota. Default mode is hosted; Advanced BYOK remains available.
+
+Keep pay-only changes on `prod-pay`. Periodically merge `main` → `prod-pay`; do not merge pay features back into `main`.

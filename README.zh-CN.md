@@ -280,3 +280,39 @@ BOSS 的“继续沟通”和本地已有沟通记录也可补写加分项：当
 - [ ] 每个新适配器先在脱敏 DOM fixture 上验证，再进行真实页面运行。
 
 准备贡献其中之一？请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-new-job-site)，其中列出了适配器契约和需要修改的具体文件。
+
+## prod-pay 托管模式（分支 `prod-pay`）
+
+`main` 继续免费 BYOK。`prod-pay` 提供托管评分：用户邮箱登录（Resend magic link），无需自备 API Key。
+
+### 服务端
+
+```bash
+PAY_MODE=1
+APP_PUBLIC_URL=https://your-pay-host.example
+RESEND_API_KEY=re_xxx
+RESEND_FROM=JSeeker <onboarding@resend.dev>
+ADMIN_PASSWORD=强密码
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=...
+OPENAI_MODEL=...
+PAY_DB_PATH=./data/pay-store.json
+JSEEKER_HOST=0.0.0.0
+
+npm run helper:pay   # 本地可用 PAY_MAIL_STUB=1 跳过真发信
+```
+
+- 新用户登录即送 **30 次成功沟通**试用；按 `contact_opened` 幂等扣减。
+- 额度用尽后，云端评分与自动沟通停止。
+- Admin：`/admin`，用 `ADMIN_PASSWORD` 管理 enable/额度。
+- 用户本机仍可跑 Helper 做 OCR（可选）。
+
+### 扩展（pay 构建）
+
+```bash
+PAY_MODE=1 CLOUD_BASE_URL=https://your-pay-host.example npm run build:pay
+```
+
+加载 `dist/`。设置页登录邮箱、粘贴兑换码、查看额度。默认托管；高级仍可 BYOK。
+
+付费相关改动只留在 `prod-pay`；定期 `main → prod-pay` 同步，不要把 pay 合回 `main`。
