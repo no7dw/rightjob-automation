@@ -442,8 +442,6 @@ $("#title-screen").onchange = action(async () => {
   return "标题预筛已更新";
 });
 
-setupNav();
-
 try {
   await loadCatalog();
   await refresh({ refreshPay: false });
@@ -453,6 +451,8 @@ try {
   );
   renderTitleScreen(!!title_screen_enabled);
   if (pay.enabled) await pay.boot();
+  setupNav();
 } catch (error) {
   $("#message").textContent = error.message;
+  setupNav();
 }
